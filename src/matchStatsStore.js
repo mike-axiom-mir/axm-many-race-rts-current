@@ -7,13 +7,18 @@ function finite(value, fallback = 0) {
   return Number.isFinite(number) ? number : fallback;
 }
 
+function optionalFinite(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function clampInt(value, min = 0, max = Number.MAX_SAFE_INTEGER) {
   return Math.max(min, Math.min(max, Math.round(finite(value, min))));
 }
 
 function safeString(value, fallback = "") {
-  const text = String(value ?? fallback).trim();
-  return text.slice(0, 180);
+  return String(value ?? fallback).trim().slice(0, 180);
 }
 
 function clone(value) {
@@ -21,14 +26,12 @@ function clone(value) {
 }
 
 function emptyLedger() {
-  return {
-    schemaVersion: MATCH_STATS_SCHEMA_VERSION,
-    updatedAt: null,
-    matches: []
-  };
+  return { schemaVersion: MATCH_STATS_SCHEMA_VERSION, updatedAt: null, matches: [] };
 }
 
 function normalizeParticipant(value = {}) {
+  const domination = optionalFinite(value.mapDomination);
+  const integrity = optionalFinite(value.workshopIntegrity);
   return {
     seatId: safeString(value.seatId || value.owner || "player", "player"),
     controller: safeString(value.controller || "human", "human"),
@@ -43,14 +46,15 @@ function normalizeParticipant(value = {}) {
     structuresFielded: clampInt(value.structuresFielded),
     structuresLost: clampInt(value.structuresLost),
     orders: clampInt(value.orders),
-    mapDomination: Math.max(-100, Math.min(100, finite(value.mapDomination))),
+    mapDomination: domination === null ? null : Math.max(-100, Math.min(100, domination)),
     wavesCleared: clampInt(value.wavesCleared),
-    workshopIntegrity: Math.max(0, Math.min(100, finite(value.workshopIntegrity)))
+    workshopIntegrity: integrity === null ? null : Math.max(0, Math.min(100, integrity))
   };
 }
 
 function normalizeMatch(value = {}) {
-  const participants = Array.isArray(value.participants) ? value.participants.map(normalizeParticipant) : [];
+  const finalDomination = optionalFinite(value.team?.finalMapDomination);
+  const integrity = optionalFinite(value.team?.workshopIntegrity);
   return {
     id: safeString(value.id),
     recordedAt: safeString(value.recordedAt || new Date().toISOString()),
@@ -69,10 +73,10 @@ function normalizeMatch(value = {}) {
       finalSupply: Math.max(0, finite(value.team?.finalSupply)),
       peakHostiles: clampInt(value.team?.peakHostiles),
       peakTowers: clampInt(value.team?.peakTowers),
-      workshopIntegrity: Math.max(0, Math.min(100, finite(value.team?.workshopIntegrity))),
-      finalMapDomination: Math.max(-100, Math.min(100, finite(value.team?.finalMapDomination)))
+      workshopIntegrity: integrity === null ? null : Math.max(0, Math.min(100, integrity)),
+      finalMapDomination: finalDomination === null ? null : Math.max(-100, Math.min(100, finalDomination))
     },
-    participants
+    participants: Array.isArray(value.participants) ? value.participants.map(normalizeParticipant) : []
   };
 }
 
@@ -113,16 +117,18 @@ function saveRaw(ledger) {
   }
 }
 
-function factionKey(participant) {
-  return participant?.factionId || "unknown";
-}
-
 function resultFlags(result) {
   const value = String(result || "").toLowerCase();
   return {
     win: value === "victory" || value === "win" || value === "won",
     loss: value === "defeat" || value === "loss" || value === "lost"
   };
+}
+
+function participantMatches(participant, options) {
+  if (options.controller && participant.controller !== String(options.controller)) return false;
+  if (Array.isArray(options.controllers) && options.controllers.length && !options.controllers.includes(participant.controller)) return false;
+  return true;
 }
 
 export function makeMatchId(parts = []) {
@@ -153,37 +159,23 @@ export function recordMatchStats(matchInput) {
 
 export function factionStats(options = {}) {
   const ledger = loadRaw();
-  const controllerFilter = options.controller ? String(options.controller) : null;
   const modeFilter = options.mode ? String(options.mode) : null;
   const output = new Map();
 
   for (const match of ledger.matches) {
     if (modeFilter && match.mode !== modeFilter) continue;
     for (const participant of match.participants) {
-      if (controllerFilter && participant.controller !== controllerFilter) continue;
-      const key = factionKey(participant);
+      if (!participantMatches(participant, options)) continue;
+      const key = participant.factionId || "unknown";
       if (!output.has(key)) {
         output.set(key, {
-          factionId: key,
-          factionName: participant.factionName || key,
-          matches: 0,
-          wins: 0,
-          losses: 0,
-          timeSeconds: 0,
-          damage: 0,
-          kills: 0,
-          formationsFielded: 0,
-          formationsLost: 0,
-          survivors: 0,
-          structuresFielded: 0,
-          structuresLost: 0,
-          orders: 0,
-          wavesCleared: 0,
-          bestWavesCleared: 0,
-          dominationSum: 0,
-          dominationSamples: 0,
-          workshopIntegritySum: 0,
-          workshopIntegritySamples: 0,
+          factionId: key, factionName: participant.factionName || key,
+          matches: 0, wins: 0, losses: 0, timeSeconds: 0, damage: 0, kills: 0,
+          formationsFielded: 0, formationsLost: 0, survivors: 0,
+          structuresFielded: 0, structuresLost: 0, orders: 0,
+          wavesCleared: 0, bestWavesCleared: 0,
+          dominationSum: 0, dominationSamples: 0,
+          workshopIntegritySum: 0, workshopIntegritySamples: 0,
           modes: {}
         });
       }
@@ -203,11 +195,11 @@ export function factionStats(options = {}) {
       row.orders += participant.orders;
       row.wavesCleared += participant.wavesCleared;
       row.bestWavesCleared = Math.max(row.bestWavesCleared, participant.wavesCleared);
-      if (Number.isFinite(participant.mapDomination)) {
+      if (participant.mapDomination !== null) {
         row.dominationSum += participant.mapDomination;
         row.dominationSamples++;
       }
-      if (participant.workshopIntegrity > 0 || match.mode === "defend-workshop") {
+      if (participant.workshopIntegrity !== null) {
         row.workshopIntegritySum += participant.workshopIntegrity;
         row.workshopIntegritySamples++;
       }
@@ -219,13 +211,18 @@ export function factionStats(options = {}) {
     ...row,
     winRate: row.matches ? row.wins / row.matches : 0,
     averageDamage: row.matches ? row.damage / row.matches : 0,
-    averageMapDomination: row.dominationSamples ? row.dominationSum / row.dominationSamples : 0,
-    averageWorkshopIntegrity: row.workshopIntegritySamples ? row.workshopIntegritySum / row.workshopIntegritySamples : 0
+    averageMapDomination: row.dominationSamples ? row.dominationSum / row.dominationSamples : null,
+    averageWorkshopIntegrity: row.workshopIntegritySamples ? row.workshopIntegritySum / row.workshopIntegritySamples : null
   })).sort((a, b) => b.matches - a.matches || b.wins - a.wins || a.factionName.localeCompare(b.factionName));
 }
 
 export function statsOverview(options = {}) {
-  const matches = loadRaw().matches.filter(match => !options.mode || match.mode === options.mode);
+  const ledger = loadRaw();
+  const modeFilter = options.mode ? String(options.mode) : null;
+  const matches = ledger.matches.filter(match => {
+    if (modeFilter && match.mode !== modeFilter) return false;
+    return match.participants.some(participant => participantMatches(participant, options));
+  });
   const factions = factionStats(options);
   const favorite = factions[0] || null;
   return {
@@ -241,7 +238,7 @@ export function exportMatchStatsSnapshot() {
     exportedAt: new Date().toISOString(),
     storageKey: MATCH_STATS_STORAGE_KEY,
     ledger: readMatchStats(),
-    overview: statsOverview()
+    overview: statsOverview({ controller: "human" })
   };
 }
 
