@@ -1,5 +1,6 @@
 import { ATLAS_TYPES, registerAtlasEntries } from "./atlasRegistry.js";
 import { DEFEND_ATLAS_ENTRIES, DEFEND_UPGRADES } from "./defendConfig.js";
+import "./dominationAtlas.js";
 
 if (!ATLAS_TYPES.some(type => type.id === "upgrade")) {
   const modeIndex = ATLAS_TYPES.findIndex(type => type.id === "mode");
