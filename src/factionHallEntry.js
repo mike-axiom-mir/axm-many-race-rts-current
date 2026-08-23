@@ -1,2 +1,2 @@
-import "./scoutRegistryPatch.js";
-import "./factionHall.js";
+await import("./scoutRegistryPatch.js");
+await import("./factionHall.js");
