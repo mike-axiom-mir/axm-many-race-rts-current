@@ -5,3 +5,5 @@ import "./unitBuildingVisualPatch.js";
 import "./defenseRosterVisualPatch.js";
 import "./defendWorkshop.js";
 import "./defendLifecyclePatch.js";
+import "./defendCoopSectorPatch.js";
+import "./defendMetricsPatch.js";
