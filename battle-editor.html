@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#050b12" />
+  <title>AXM Many-Race RTS — Battle Map Editor</title>
+  <link rel="stylesheet" href="battle.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="head">
+      <div class="identity"><a href="./index.html" class="mark" style="text-decoration:none">AXM</a><div><div class="tag">CHALLENGE AUTHORING</div><h1>Battle Map Editor</h1><p>Stage the fight on top of a finished world map</p></div></div>
+      <div class="head-actions"><button id="newBattleBtn">New</button><button id="importBattleBtn">Import battle</button><button id="exportBattleBtn">Export battle JSON</button><a href="./battlemaps.html">Battle Maps</a></div>
+    </header>
+
+    <main class="editor">
+      <aside class="panel glass">
+        <div class="section">Battle identity</div>
+        <label class="field"><span>Name</span><input id="battleName"></label>
+        <label class="field"><span>ID</span><input id="battleId"></label>
+        <label class="field"><span>Subtitle</span><input id="battleSubtitle"></label>
+        <label class="field"><span>Description</span><textarea id="battleDescription" rows="3"></textarea></label>
+        <label class="field"><span>Difficulty</span><select id="difficulty"><option>easy</option><option selected>normal</option><option>hard</option><option>extreme</option></select></label>
+
+        <div class="section">World map</div>
+        <label class="field"><span>Built-in map</span><select id="mapSelect"><option value="founders-crossing">Founder's Crossing</option><option value="crownworld">Crownworld</option><option value="custom">Imported custom map</option></select></label>
+        <div class="dropzone"><b>Pull a built map</b><br><span id="mapStatus">Using built-in Founder's Crossing</span><br><button id="importMapBtn" style="margin-top:8px">Import map JSON</button></div>
+
+        <div class="section">Content packs</div>
+        <div class="dropzone"><b>Faction / unit packs</b><br>Built-in faction packs are always available.<br><button id="importPackBtn" style="margin-top:8px">Import unit pack JSON</button></div>
+        <div id="packList" class="pack-list" style="margin-top:8px"></div>
+
+        <div class="section">Scene</div>
+        <label class="field"><span>Time of day</span><select id="timeOfDay"><option>day</option><option>morning</option><option>late-afternoon</option><option>night</option><option>orbital-day</option></select></label>
+        <label class="field"><span>Weather</span><select id="weather"><option>clear</option><option>wind</option><option>rain</option><option>snow</option><option>storm</option><option>dust</option></select></label>
+        <label class="field"><span>Intro text</span><textarea id="introText" rows="3"></textarea></label>
+        <label class="field"><span>Victory text</span><textarea id="victoryText" rows="2"></textarea></label>
+      </aside>
+
+      <section class="scene-board">
+        <div id="sceneMarkers" class="markers"></div>
+        <div class="scene-title"><div class="tag">BATTLE SCENE</div><strong id="sceneName">New Battle Map</strong><p id="sceneSummary">Map + seats + forces + objectives + rules. Geography remains owned by Map Builder.</p></div>
+      </section>
+
+      <aside class="panel glass">
+        <div class="section">Seats</div>
+        <div id="slotEditor" class="slot-editor"></div>
+
+        <div class="section">Starting forces</div>
+        <div id="forceList" class="force-list"></div>
+        <button id="addForceBtn" class="wide secondary" type="button">+ Add starting force</button>
+
+        <div class="section">Objectives</div>
+        <div id="objectiveList" class="objective-list"></div>
+        <button id="addObjectiveBtn" class="wide secondary" type="button">+ Add objective</button>
+
+        <div class="section">Challenge modifiers</div>
+        <label class="field"><span>Build mode</span><select id="buildMode"><option>normal</option><option>limited</option><option>disabled</option></select></label>
+        <label class="field"><span>Economy mode</span><select id="economyMode"><option>normal</option><option>mobile</option><option>fixed</option><option>scarce</option></select></label>
+        <label class="field"><span>Reinforcements</span><select id="reinforcements"><option>normal</option><option>waves</option><option>limited</option><option>none</option></select></label>
+
+        <div class="section">Advanced rules</div>
+        <a class="wide secondary" href="./scenario.html">Open Scenario Studio</a>
+        <p class="muted" style="font-size:10px;margin-top:6px">Scenario Studio owns deep triggers/rules. Battle Map Editor keeps the normal challenge workflow understandable.</p>
+
+        <div class="section">Validation</div>
+        <div id="battleValidation" class="validation"></div>
+      </aside>
+    </main>
+
+    <input id="mapFile" type="file" accept="application/json,.json" hidden>
+    <input id="packFile" type="file" accept="application/json,.json" hidden>
+    <input id="battleFile" type="file" accept="application/json,.json" hidden>
+  </div>
+  <script type="module" src="src/battleEditor.js"></script>
+</body>
+</html>
