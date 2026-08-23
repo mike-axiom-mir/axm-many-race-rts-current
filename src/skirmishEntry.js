@@ -33,3 +33,4 @@ import "./mapDominationMomentumPatch.js";
 import "./baseDefenseCoordinationPatch.js";
 import "./skirmishMatchMetricsPatch.js";
 import "./game.js";
+import "./skirmishFactionStatsPersistencePatch.js";
