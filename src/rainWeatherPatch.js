@@ -134,8 +134,7 @@ class RainWeatherSystem {
     this.active = false;
     this.cells = [];
     this.group.visible = false;
-    for (const visual of this.visuals) this.group.remove(visual.group);
-    this.visuals.length = 0;
+    this.clearVisuals();
     if (this.badge) this.badge.classList.add("hidden");
   }
 
@@ -271,13 +270,13 @@ function ensureRainWeather(world) {
 
 RTSWorld.prototype.updateMovement = function rainAwareMovement(entity, dt, time) {
   const data = entity?.userData || {};
-  if ((data.type !== "squad" && data.type !== "founder") || !data.target) {
-    return previousMovement.call(this, entity, dt, time);
+  if (data.type === "squad" || data.type === "founder") {
+    const multiplier = rainMovementMultiplierAt(this, entity.position.x, entity.position.z);
+    data.weatherMovementMultiplier = multiplier;
+    data.weatherState = multiplier < 1 ? "Rain • -10% speed" : null;
+    if (data.target) return previousMovement.call(this, entity, dt * multiplier, time);
   }
-  const multiplier = rainMovementMultiplierAt(this, entity.position.x, entity.position.z);
-  data.weatherMovementMultiplier = multiplier;
-  data.weatherState = multiplier < 1 ? "Rain • -10% speed" : null;
-  return previousMovement.call(this, entity, dt * multiplier, time);
+  return previousMovement.call(this, entity, dt, time);
 };
 
 RTSWorld.prototype.tick = function rainWeatherTick(time, dt) {
