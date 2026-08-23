@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="theme-color" content="#09121a" />
+  <title>AXM Many-Race RTS — Map Builder</title>
+  <link rel="stylesheet" href="builder.css" />
+</head>
+<body>
+  <div id="builderApp">
+    <header class="topbar glass">
+      <div class="brand">
+        <a href="./index.html" class="brand-mark">AXM</a>
+        <div>
+          <h1>Many-Race RTS Map Builder</h1>
+          <p>Flat battlefields + globe worlds from one authoring tool</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button id="newBtn">New</button>
+        <button id="importBtn">Import</button>
+        <button id="exportBtn" class="primary">Export JSON</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="viewportWrap">
+        <div id="viewport"></div>
+        <div class="viewport-badge glass">
+          <strong id="projectionBadge">FLAT MAP</strong>
+          <span id="coordReadout">x 0 · z 0</span>
+        </div>
+        <div id="toolHint" class="tool-hint glass">Select a tool, then click the world.</div>
+      </section>
+
+      <aside class="left-panel glass panel-scroll">
+        <section>
+          <div class="eyebrow">WORLD TYPE</div>
+          <div class="segmented" id="projectionSwitch">
+            <button data-projection="flat" class="active">Flat</button>
+            <button data-projection="globe">Globe</button>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-title">Map identity</div>
+          <label>Name<input id="mapName" value="New Flat World" /></label>
+          <label>ID<input id="mapId" value="new-flat-world" /></label>
+          <label>Description<textarea id="mapDescription" rows="3">Created with the AXM Many-Race RTS Map Builder.</textarea></label>
+          <div class="row-2">
+            <label>Seed<input id="mapSeed" type="number" /></label>
+            <label id="radiusField" class="hidden">Radius<input id="globeRadius" type="number" min="8" max="200" step="1" value="24" /></label>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-title">Placement tools</div>
+          <div class="tool-grid" id="toolGrid">
+            <button data-tool="select" class="active"><b>↖</b><span>Select</span></button>
+            <button data-tool="playerStart"><b>◆</b><span>Player start</span></button>
+            <button data-tool="enemyStart"><b>◆</b><span>Enemy start</span></button>
+            <button data-tool="strategic"><b>◎</b><span>Strategic site</span></button>
+            <button data-tool="resource"><b>⬢</b><span>Resource zone</span></button>
+            <button data-tool="terrain"><b>▲</b><span>Terrain stamp</span></button>
+            <button data-tool="erase"><b>×</b><span>Erase</span></button>
+          </div>
+        </section>
+
+        <section id="flatSettings">
+          <div class="section-title">Flat world</div>
+          <div class="row-2">
+            <label>Width<input id="flatWidth" type="number" min="40" max="400" value="100" /></label>
+            <label>Depth<input id="flatDepth" type="number" min="40" max="400" value="72" /></label>
+          </div>
+        </section>
+
+        <section id="globeSettings" class="hidden">
+          <div class="section-title">Globe world</div>
+          <label><span>Atmosphere</span><input id="atmosphereToggle" type="checkbox" checked /></label>
+          <p class="hint">Drag to rotate the globe. Wheel/pinch changes zoom. Placement uses latitude + longitude.</p>
+        </section>
+
+        <section>
+          <div class="section-title">World palette</div>
+          <div class="row-2">
+            <label>Land<input id="terrainTint" type="color" value="#75985f" /></label>
+            <label id="oceanTintField" class="hidden">Ocean<input id="oceanTint" type="color" value="#315f79" /></label>
+          </div>
+        </section>
+      </aside>
+
+      <aside class="right-panel glass panel-scroll">
+        <section>
+          <div class="section-head">
+            <div>
+              <div class="eyebrow">MAP CONTENT</div>
+              <h2 id="objectCount">0 objects</h2>
+            </div>
+            <button id="undoBtn" title="Undo">↶</button>
+          </div>
+          <div id="objectList" class="object-list"></div>
+        </section>
+
+        <section id="inspector" class="hidden">
+          <div class="section-title">Inspector</div>
+          <div id="inspectorBody"></div>
+          <button id="deleteSelectedBtn" class="danger wide">Delete selected</button>
+        </section>
+
+        <section>
+          <div class="section-title">Validation</div>
+          <div id="validation" class="validation"></div>
+        </section>
+
+        <section>
+          <div class="section-title">Builder actions</div>
+          <button id="copyBtn" class="wide">Copy JSON</button>
+          <button id="legacyBtn" class="wide">Copy flat legacy map</button>
+          <button id="clearBtn" class="wide danger">Clear placed objects</button>
+          <input id="fileInput" type="file" accept="application/json,.json" hidden />
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+      }
+    }
+  </script>
+  <script type="module" src="src/mapBuilder.js"></script>
+</body>
+</html>
