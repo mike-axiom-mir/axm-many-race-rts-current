@@ -1,6 +1,7 @@
 import "./selectedMapPatch.js";
 import "./defenseRosterRegistryPatch.js";
 import "./scoutRegistryPatch.js";
+import "./battlefieldBaseApproachPatch.js";
 import "./mapVisualRuntimePatch.js";
 import "./mapReliefPatch.js";
 import "./terrainMovementPatch.js";
@@ -29,4 +30,5 @@ import "./combatWaypointEconomyTagPatch.js";
 import "./combatWaypointPatch.js";
 import "./combatWaypointInteropPatch.js";
 import "./mapDominationMomentumPatch.js";
+import "./baseDefenseCoordinationPatch.js";
 import "./game.js";
