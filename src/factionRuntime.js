@@ -19,6 +19,16 @@ function activeFounder(world, owner) {
   return world.getLiving(owner, "founder")[0] || null;
 }
 
+function ownerBuildings(world, owner, role = null) {
+  return world.entities.filter(entity =>
+    entity.parent &&
+    entity.userData.hp > 0 &&
+    entity.userData.owner === owner &&
+    entity.userData.type === "building" &&
+    (!role || entity.userData.role === role)
+  );
+}
+
 export class FactionRuntime {
   constructor(world) {
     this.world = world;
@@ -53,10 +63,52 @@ export class FactionRuntime {
     const faction = this.factionFor(owner);
     if (!faction) return;
 
-    if (faction.id === "northpole") this.applyNorthpole(owner, faction, time);
+    if (faction.id === "ironvale") this.applyIronvale(owner);
+    else if (faction.id === "greenwake") this.applyGreenwake(owner, dt);
+    else if (faction.id === "ashwind") this.applyAshwind(owner);
+    else if (faction.id === "northpole") this.applyNorthpole(owner, faction, time);
     else if (faction.id === "suitcase") this.applySuitcase(owner);
     else if (faction.id === "fatfrotz") this.applyFatfrotz(owner);
     else if (faction.id === "clockworkOrchard") this.applyClockwork(owner);
+  }
+
+  applyIronvale(owner) {
+    const buildings = ownerBuildings(this.world, owner);
+    if (!buildings.length) return;
+    for (const squad of activeSquads(this.world, owner)) {
+      const supported = buildings.some(building => building.position.distanceTo(squad.position) <= 7.5);
+      if (!supported) continue;
+      squad.userData.damage = squad.userData.__axmBaseDamage * 1.08;
+      squad.userData.range = squad.userData.__axmBaseRange + .10;
+      squad.userData.__axmFactionState = "Compact Discipline";
+    }
+  }
+
+  applyGreenwake(owner, dt) {
+    const economyBuildings = ownerBuildings(this.world, owner, "economy");
+    if (!economyBuildings.length) return;
+    for (const squad of activeSquads(this.world, owner)) {
+      const supported = economyBuildings.some(building => building.position.distanceTo(squad.position) <= 8);
+      if (!supported) continue;
+      const maxHp = Number(squad.userData.maxHp || squad.userData.hp || 0);
+      if (maxHp > 0 && squad.userData.hp < maxHp) {
+        squad.userData.hp = Math.min(maxHp, squad.userData.hp + 4.2 * dt);
+      }
+      squad.userData.__axmFactionState = "Living Supply";
+    }
+  }
+
+  applyAshwind(owner) {
+    const capital = this.world.entities.find(entity =>
+      entity.parent && entity.userData.hp > 0 && entity.userData.owner === owner && entity.userData.type === "capital"
+    );
+    if (!capital) return;
+    for (const squad of activeSquads(this.world, owner)) {
+      if (squad.position.distanceTo(capital.position) < 14) continue;
+      squad.userData.damage = squad.userData.__axmBaseDamage * 1.12;
+      squad.userData.speed = squad.userData.__axmBaseSpeed * 1.08;
+      squad.userData.__axmFactionState = "Forward Momentum";
+    }
   }
 
   applyNorthpole(owner, faction, time) {
