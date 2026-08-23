@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="theme-color" content="#040a11" />
+  <title>AXM Many-Race RTS — World Domination</title>
+  <link rel="stylesheet" href="domination.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="viewport"></div>
+
+    <header class="topbar glass">
+      <div class="identity"><a href="./index.html" class="mark">AXM</a><div><div class="eyebrow">GLOBAL REAL-TIME CLAN WAR</div><h1>World Domination</h1><p>Territories produce while the war moves elsewhere.</p></div></div>
+      <div class="head-actions"><button id="newMatchBtn">New match</button><a href="./atlas.html">Atlas</a><a href="./index.html">Main menu</a></div>
+    </header>
+
+    <section id="setup" class="setup glass">
+      <div><div class="eyebrow">CREATE WORLD WAR</div><h2>One planet. Two clans. Every border matters.</h2><p>Choose 1v1 through 4v4. Clan seats can later be Human, Faction AI or Connected AI. Neutral territory fills most of the globe at match start.</p></div>
+      <label>Clan size<select id="teamSize"><option value="1">1v1</option><option value="2">2v2</option><option value="3">3v3</option><option value="4">4v4</option></select></label>
+      <div class="rule-strip"><span>Neighbor-only contests</span><span>Local armies stay local</span><span>Background production</span><span>Neutral cities</span><span>Reserve formations</span></div>
+      <button id="createBtn" class="primary big">CREATE WORLD</button>
+      <button id="continueBtn" class="secondary big">CONTINUE SAVED WORLD</button>
+    </section>
+
+    <aside id="leftHud" class="hud left glass hidden">
+      <div class="section-head"><div><div class="eyebrow">CLAN VIEW</div><h2 id="teamName">Azure Clan</h2></div><select id="perspective"><option value="azure">Azure</option><option value="crimson">Crimson</option></select></div>
+      <div class="score"><div><span>Territories</span><b id="territoryScore">0</b></div><div><span>Reserve</span><b id="reserveCount">0</b></div><div><span>Live contests</span><b id="contestCount">0</b></div></div>
+      <div class="section-title">Global resources</div><div id="globalResources" class="resources"></div>
+      <div class="section-title">Clan seats</div><div id="seatList" class="seat-list"></div>
+      <div class="section-title">Expedition reserve</div><div id="reserveList" class="reserve-list"></div>
+    </aside>
+
+    <aside id="rightHud" class="hud right glass hidden">
+      <div id="noSelection" class="empty"><b>Select a territory</b><span>Tap a node on the globe.</span></div>
+      <div id="territoryDetail" class="hidden">
+        <div class="section-head"><div><div class="eyebrow">TERRITORY</div><h2 id="territoryName"></h2><p id="territoryStatus"></p></div><div id="ownerBadge" class="owner-badge"></div></div>
+        <div id="mapStatus" class="map-status"></div>
+        <div class="section-title">Cities</div><div id="cityList" class="city-list"></div>
+        <div class="section-title">Local production</div><div id="localResources" class="resources"></div><div id="productionInfo" class="production-info"></div>
+        <div class="section-title">Local garrison</div><div id="garrisonList" class="garrison-list"></div>
+        <div class="section-title">Borders</div><div id="neighborList" class="neighbor-list"></div>
+        <div class="actions"><button id="contestBtn" class="primary">Attack neighboring territory</button><button id="assignReserveBtn">Assign reserve here</button></div>
+      </div>
+    </aside>
+
+    <section id="bottomPanel" class="bottom glass hidden">
+      <div><div class="eyebrow">LIVE WORLD</div><div id="clockText" class="clock-text">Real-time production active</div></div>
+      <div id="contestStrip" class="contest-strip"></div>
+      <button id="saveBtn">Save</button>
+    </section>
+
+    <section id="contestPanel" class="modal glass hidden">
+      <div class="eyebrow">TERRITORY CONTEST</div><h2 id="contestTitle">Stage expedition</h2><p id="contestText"></p>
+      <div id="expeditionForces" class="expedition-forces"></div>
+      <div class="modal-actions"><button id="cancelContestBtn">Cancel</button><button id="confirmContestBtn" class="primary">COMMIT EXPEDITION</button></div>
+    </section>
+
+    <section id="liveContestPanel" class="modal glass hidden">
+      <div class="eyebrow">LIVE CONTEST</div><h2 id="liveContestTitle"></h2><p id="liveContestText"></p>
+      <div id="liveBattleSummary" class="battle-summary"></div>
+      <div class="modal-actions"><button id="closeLiveContestBtn">Close</button><button id="copyBattleBtn">Copy battle package</button><a id="openBattleLink" class="primary-link" href="./domination-battle.html">Open staging</a></div>
+    </section>
+
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}</script>
+  <script type="module" src="src/domination.js"></script>
+</body>
+</html>
