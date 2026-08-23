@@ -15,7 +15,12 @@ function ownerProjectileColor(owner) {
 }
 
 function armorMultiplier(target) {
-  const armor = Math.max(0, Math.min(.65, Number(target?.userData?.combatArmor || target?.userData?.armor || 0)));
+  const data = target?.userData || {};
+  const armor = Math.max(0, Math.min(.65,
+    Number(data.combatArmor || data.armor || 0) +
+    Number(data.__axmSupportArmor || 0) +
+    Number(data.__axmFactionArmor || 0)
+  ));
   return 1 - armor;
 }
 
