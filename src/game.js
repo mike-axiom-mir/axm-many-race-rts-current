@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { RTSWorld } from "./world.js";
 import { AGE_DATA, FACTIONS, RESOURCE_KEYS, getFactionList } from "./factions.js";
+import { DEFAULT_MAP } from "./maps.js";
+import { MapDirector } from "./mapDirector.js";
 
 const $ = id => document.getElementById(id);
 const ui = {
@@ -14,8 +16,9 @@ const ui = {
 const BASE_INCOME = { food: .78, wood: .68, stone: .48, gold: .44 };
 const RESOURCE_LABELS = { food: "Food", wood: "Wood", stone: "Stone", gold: "Gold" };
 const RESOURCE_ICONS = { food: "◆", wood: "♣", stone: "⬢", gold: "●" };
-const PLAYER_HOME = new THREE.Vector3(-30, 0, -17);
-const ENEMY_HOME = new THREE.Vector3(30, 0, 17);
+const ACTIVE_MAP = DEFAULT_MAP;
+const PLAYER_HOME = new THREE.Vector3(...ACTIVE_MAP.playerStart);
+const ENEMY_HOME = new THREE.Vector3(...ACTIVE_MAP.enemyStart);
 
 const state = {
   started: false,
@@ -44,6 +47,7 @@ const world = new RTSWorld($("viewport"), {
   onGroundClick: point => handleGroundClick(point),
   onEntityDestroyed: entity => handleDestroyed(entity)
 });
+const mapDirector = new MapDirector(world);
 
 function costText(cost = {}) {
   return Object.entries(cost).map(([k, v]) => `${RESOURCE_ICONS[k] || ""}${Math.round(v)}`).join(" ");
@@ -61,10 +65,6 @@ function pay(cost) {
   if (!canAfford(cost)) return false;
   for (const [k, v] of Object.entries(cost)) state.resources[k] -= v;
   return true;
-}
-
-function addResources(bundle) {
-  for (const [k, v] of Object.entries(bundle || {})) state.resources[k] = (state.resources[k] || 0) + v;
 }
 
 function toast(message, kind = "") {
@@ -117,6 +117,7 @@ function startGame(factionId) {
   state.workforceClock = 0;
   state.hudClock = 0;
   world.resetDynamic();
+  mapDirector.reset(ACTIVE_MAP);
   world.ground.material.color.setHex(faction.terrainTint);
 
   state.playerCapital = world.spawnCapital(faction, PLAYER_HOME.clone(), false);
@@ -134,12 +135,12 @@ function startGame(factionId) {
   ui.restart.classList.remove("hidden");
   ui.factionName.textContent = faction.name;
   ui.factionIcon.textContent = faction.symbol;
-  ui.factionTagline.textContent = `${faction.founder} begins beside your capital. ${faction.special}`;
+  ui.factionTagline.textContent = `${faction.founder} begins beside your capital on ${ACTIVE_MAP.name}. ${faction.special}`;
   renderEconomyControls();
   renderActions();
   renderHud();
   world.cameraTarget.copy(new THREE.Vector3(-18, 0, -8));
-  toast(`${faction.founder} has founded the ${faction.name}.`, "good");
+  toast(`${faction.founder} has founded the ${faction.name} on ${ACTIVE_MAP.name}.`, "good");
 }
 
 function renderEconomyControls() {
@@ -252,7 +253,10 @@ function beginPlacement(def) {
 function placementValid(point) {
   if (point.x > 15) return false;
   if (Math.abs(point.x) > 47 || Math.abs(point.z) > 33) return false;
-  if (point.distanceTo(new THREE.Vector3(0,0,0)) < 5.5) return false;
+  for (const site of mapDirector.sites) {
+    const center = new THREE.Vector3(...site.def.position);
+    if (point.distanceTo(center) < Math.max(4.8, site.def.radius * .72)) return false;
+  }
   for (const e of world.entities) {
     if (!e.parent || (e.userData.type !== "building" && e.userData.type !== "capital")) continue;
     if (e.position.distanceTo(point) < (e.userData.radius || 2) + 3.2) return false;
@@ -263,7 +267,7 @@ function placementValid(point) {
 function handleGroundClick(point) {
   if (!state.started || state.ended || !state.placement) return;
   point.y = 0;
-  if (!placementValid(point)) return toast("That site is blocked or too deep in enemy territory.", "bad");
+  if (!placementValid(point)) return toast("That site is blocked, strategic ground, or too deep in enemy territory.", "bad");
   const { def, cost } = state.placement;
   if (!pay(cost)) return toast("Resources changed before construction could begin.", "bad");
   const building = world.spawnBuilding(def, state.faction, point, false);
@@ -306,8 +310,9 @@ function commandArmy(command) {
     world.command("player", PLAYER_HOME.clone().add(new THREE.Vector3(6,0,5)));
     toast("Army doctrine: defend the homeland.");
   } else if (command === "center") {
-    world.command("player", new THREE.Vector3(-1,0,-1));
-    toast("Army doctrine: contest the frontier.");
+    const objective = mapDirector.objectiveFor("player");
+    world.command("player", objective);
+    toast("Army doctrine: secure the next strategic site.");
   } else if (command === "attack") {
     const target = state.enemyCapital?.position?.clone?.() || ENEMY_HOME.clone();
     world.command("player", target);
@@ -319,6 +324,7 @@ function economyTick(dt) {
   const shares = allocationShares();
   const ageMult = AGE_DATA[state.age].multiplier;
   const doctrine = state.researched.has("stewarded-economy") ? 1.12 : 1;
+  const territoryBonus = mapDirector.incomeBonus("player");
   for (const key of RESOURCE_KEYS) {
     const factionMult = state.faction.economy[key] || 1;
     let gain = state.workforce * shares[key] * BASE_INCOME[key] * factionMult * ageMult * doctrine * dt;
@@ -327,7 +333,7 @@ function economyTick(dt) {
       const def = state.faction.buildings.find(x => x.id === b.userData.id);
       gain += (def?.income?.[key] || 0) * dt;
     }
-    if (state.frontier === "player" && key === "gold") gain += 1.5 * ageMult * dt;
+    gain += (territoryBonus[key] || 0) * ageMult * dt;
     state.resources[key] += gain;
   }
 
@@ -341,10 +347,14 @@ function economyTick(dt) {
   }
 }
 
-function updateFrontier() {
-  const near = owner => world.getLiving(owner).filter(e => (e.userData.type === "squad" || e.userData.type === "founder") && e.position.length() < 7).length;
-  const p = near("player"), e = near("enemy");
-  state.frontier = p > e ? "player" : e > p ? "enemy" : p === 0 && e === 0 ? "neutral" : "contested";
+function processMapState(dt) {
+  mapDirector.update(dt, state.elapsed);
+  state.frontier = mapDirector.centralOwner();
+  for (const event of mapDirector.drainEvents()) {
+    if (event.owner === "player") toast(`${event.site.name} secured — its resource bonus is now yours.`, "good");
+    else if (event.owner === "enemy") toast(`${event.site.name} fell under enemy control.`, "bad");
+    else if (event.previous === "player") toast(`${event.site.name} has slipped back to neutral.`, "bad");
+  }
 }
 
 function enemyTick(dt) {
@@ -352,18 +362,20 @@ function enemyTick(dt) {
   state.enemySpawnClock += dt;
   state.enemyAttackClock += dt;
   const enemySquads = world.getLiving("enemy", "squad");
+  const playerTerritory = mapDirector.ownershipCount("player");
 
-  const spawnEvery = Math.max(10, 20 - state.age * 2.2);
-  if (state.enemySpawnClock >= spawnEvery && enemySquads.length < 7 + state.age) {
+  const spawnEvery = Math.max(9, 20 - state.age * 2.2 - playerTerritory * .8);
+  if (state.enemySpawnClock >= spawnEvery && enemySquads.length < 7 + state.age + playerTerritory) {
     state.enemySpawnClock = 0;
     const f = state.enemyFaction;
     const def = f.units[Math.random() < .28 ? Math.min(1, f.units.length - 1) : 0];
     world.spawnSquad(def, f, ENEMY_HOME.clone().add(new THREE.Vector3(-7 + Math.random()*2,0,-4 + Math.random()*3)), true);
   }
 
-  if (state.enemyAttackClock >= 26) {
+  if (state.enemyAttackClock >= 23) {
     state.enemyAttackClock = 0;
-    const target = Math.random() < .46 ? new THREE.Vector3(1,0,1) : state.playerCapital.position.clone();
+    const attackCapital = Math.random() < .28;
+    const target = attackCapital ? state.playerCapital.position.clone() : mapDirector.objectiveFor("enemy");
     world.command("enemy", target);
   }
 }
@@ -397,13 +409,21 @@ function renderHud() {
   const enemySquads = world.getLiving("enemy", "squad");
   const founder = world.getLiving("player", "founder")[0];
   const capitalHp = state.playerCapital?.parent ? Math.max(0, state.playerCapital.userData.hp / state.playerCapital.userData.maxHp * 100) : 0;
-  const frontierText = state.frontier === "player" ? "Ours (+gold)" : state.frontier === "enemy" ? "Enemy held" : state.frontier === "contested" ? "Contested" : "Unclaimed";
+  const territory = mapDirector.summary();
+  const territoryRows = territory.map(site => {
+    const owner = site.contested ? "Contested" : site.owner === "player" ? "Ours" : site.owner === "enemy" ? "Enemy" : "Neutral";
+    const bonus = Object.entries(site.bonus || {}).map(([k,v]) => `+${v.toFixed(2)} ${k}/s`).join(" ");
+    return `<div class="state-row"><span>${site.name}</span><b>${owner}${site.owner === "player" && bonus ? ` • ${bonus}` : ""}</b></div>`;
+  }).join("");
+
   ui.state.innerHTML = `
+    <div class="state-row"><span>Map</span><b>${ACTIVE_MAP.name}</b></div>
     <div class="state-row"><span>Age</span><b>${AGE_DATA[state.age].name}</b></div>
     <div class="state-row"><span>Formations</span><b>${playerSquads.length}</b></div>
     <div class="state-row"><span>Enemy formations</span><b>${enemySquads.length}</b></div>
     <div class="state-row"><span>Districts</span><b>${state.buildings.filter(b=>b.parent).length}</b></div>
-    <div class="state-row"><span>Frontier</span><b>${frontierText}</b></div>
+    <div class="state-row"><span>Territory</span><b>${mapDirector.ownershipCount("player")} / ${territory.length}</b></div>
+    ${territoryRows}
     <div class="state-row"><span>Capital integrity</span><b>${capitalHp.toFixed(0)}%</b></div>
     <div class="state-row"><span>${state.faction.founder}</span><b>${founder ? Math.ceil(founder.userData.hp) + " hp" : "Fallen"}</b></div>`;
 
@@ -421,12 +441,12 @@ function renderHud() {
 function simulate(dt) {
   if (!state.started || state.ended) return;
   state.elapsed += dt;
+  processMapState(dt);
   economyTick(dt);
   enemyTick(dt);
   state.hudClock += dt;
   if (state.hudClock >= .35) {
     state.hudClock = 0;
-    updateFrontier();
     renderHud();
   }
 }
