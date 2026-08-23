@@ -14,6 +14,7 @@ import "./fogOfWarPatch.js";
 import "./battlePatch.js";
 import "./combatDeathVisualPatch.js";
 import "./factionPowerSystem.js";
+import "./factionPowerAiPatch.js";
 import "./multiSeatPatch.js";
 import "./mapSeatStartPatch.js";
 import "./seatCommandAuthorityPatch.js";
