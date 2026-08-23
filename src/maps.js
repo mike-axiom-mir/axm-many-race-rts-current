@@ -1,9 +1,17 @@
+import { SKIRMISH_MAP_PACK } from "./skirmishMapPack.js";
+
 export const MAPS = {
   foundersCrossing: {
     id: "founders-crossing",
     name: "Founder's Crossing",
     description: "A broad green crossing where three old strategic sites turn map control into economic momentum.",
+    projection: "flat",
     seed: 20260623,
+    recommendedPlayers: 2,
+    minPlayers: 2,
+    maxPlayers: 2,
+    tags: ["2-player", "balanced", "classic", "territory"],
+    playerStarts: [[-30, 0, -17], [30, 0, 17]],
     playerStart: [-30, 0, -17],
     enemyStart: [30, 0, 17],
     strategicSites: [
@@ -38,7 +46,26 @@ export const MAPS = {
         description: "Abandoned cuts and stockpiles make stone extraction far easier."
       }
     ]
-  }
+  },
+  ...SKIRMISH_MAP_PACK
 };
 
 export const DEFAULT_MAP = MAPS.foundersCrossing;
+
+export function getMapList() {
+  return Object.values(MAPS).sort((a, b) =>
+    Number(a.recommendedPlayers || 2) - Number(b.recommendedPlayers || 2) || a.name.localeCompare(b.name)
+  );
+}
+
+export function getMapById(id) {
+  return Object.values(MAPS).find(map => map.id === id) || null;
+}
+
+export function mapPlayerStarts(map) {
+  if (Array.isArray(map?.playerStarts) && map.playerStarts.length) return map.playerStarts.map(point => [...point]);
+  const starts = [];
+  if (Array.isArray(map?.playerStart)) starts.push([...map.playerStart]);
+  if (Array.isArray(map?.enemyStart)) starts.push([...map.enemyStart]);
+  return starts;
+}

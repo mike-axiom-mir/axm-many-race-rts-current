@@ -1,7 +1,9 @@
+import "./selectedMapPatch.js";
 import "./combatDepthPatch.js";
 import "./rosterAnimationPatch.js";
 import "./battlePatch.js";
 import "./multiSeatPatch.js";
+import "./mapSeatStartPatch.js";
 import "./seatCommandAuthorityPatch.js";
 import "./multiSeatVictoryPatch.js";
 import "./multiSeatMapPatch.js";
