@@ -10,3 +10,4 @@ import "./defendMetricsPatch.js";
 import "./defendMetricsRepairCapturePatch.js";
 import "./defendCoopCombatInteropPatch.js";
 import "./defendFactionStatsPersistencePatch.js";
+import "./factionStatsHistoryUiPatch.js";
