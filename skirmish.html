@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="theme-color" content="#0b1118" />
+  <title>AXM Many-Race RTS — Skirmish</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar glass">
+      <div class="brand">
+        <a href="./index.html" class="brand-mark" style="text-decoration:none">AXM</a>
+        <div>
+          <h1>Many-Race RTS • Skirmish</h1>
+          <p>Macro-first 3D strategy • asymmetric factions • low-micro armies</p>
+        </div>
+      </div>
+      <div style="display:flex;gap:7px;align-items:center;pointer-events:auto;flex-wrap:wrap;justify-content:flex-end">
+        <a href="./lobby.html" class="age-badge" style="text-decoration:none">LOBBY</a>
+        <a href="./builder.html" class="age-badge" style="text-decoration:none">MAP BUILDER</a>
+        <a href="./globe.html" class="age-badge" style="text-decoration:none">GLOBE</a>
+        <div id="ageBadge" class="age-badge">FOUNDING AGE</div>
+      </div>
+    </header>
+
+    <main>
+      <div id="viewport" aria-label="3D strategy battlefield"></div>
+      <section id="startScreen" class="start-screen glass">
+        <div class="eyebrow">SKIRMISH RUNTIME</div>
+        <h2>Choose your faction</h2>
+        <p>The flat runtime now reads the four-seat lobby. Extra Faction-AI seats can enter the battlefield from the other corners; Connected-AI seats have a normal player-command bridge. Multi-human network/input plumbing remains a later adapter.</p>
+        <div id="factionCards" class="faction-cards"></div>
+      </section>
+      <aside id="leftHud" class="left-hud glass hidden">
+        <div class="faction-heading"><div><span class="eyebrow">YOUR CIVILIZATION</span><h2 id="factionName"></h2></div><div id="factionIcon" class="faction-icon"></div></div>
+        <p id="factionTagline" class="muted"></p>
+        <div id="resources" class="resource-grid"></div>
+        <div class="section-title"><span>Macro economy</span><strong id="workforceLabel"></strong></div>
+        <p class="hint">Direct sectors instead of individual villagers.</p><div id="allocation" class="allocation"></div>
+        <div class="section-title"><span>Empire actions</span></div><div id="buildButtons" class="action-grid"></div><div id="unitButtons" class="action-grid"></div>
+        <div class="section-title"><span>Progression</span></div><div id="upgradeButtons" class="upgrade-list"></div>
+      </aside>
+      <aside id="rightHud" class="right-hud glass hidden">
+        <div class="section-title"><span>Army doctrine</span></div><p class="hint">Command the formation, not every soldier.</p>
+        <div class="command-stack"><button data-command="defend">Defend homeland</button><button data-command="center">Contest the frontier</button><button data-command="attack" class="danger">Push enemy capital</button></div>
+        <div class="section-title"><span>Strategic state</span></div><div id="strategyState" class="state-list"></div>
+        <div class="section-title"><span>Controls</span></div><div class="controls"><span><kbd>WASD</kbd> / drag — camera</span><span><kbd>Wheel</kbd> — zoom</span><span>Build button → click terrain</span></div>
+      </aside>
+      <div id="placementHint" class="placement-hint hidden">Choose a valid location</div><div id="toast" class="toast hidden"></div><button id="restartBtn" class="restart hidden">New world</button>
+    </main>
+  </div>
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}</script>
+  <script type="module" src="src/skirmishEntry.js"></script>
+</body>
+</html>

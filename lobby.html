@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#050b12" />
+  <title>AXM Many-Race RTS — Skirmish Lobby</title>
+  <link rel="stylesheet" href="lobby.css" />
+</head>
+<body>
+  <div class="lobby-shell">
+    <header class="lobby-head">
+      <div class="identity"><a href="./index.html" class="mark" style="text-decoration:none">AXM</a><div><div class="tag">SKIRMISH</div><h1>War Table Lobby</h1><p>1–4 player-controlled seats • four civilization slots by default</p></div></div>
+      <a class="back" href="./index.html">← Main menu</a>
+    </header>
+
+    <main class="lobby-grid">
+      <section class="panel glass">
+        <div class="section-title">Players / controllers</div>
+        <div id="seatList" class="seat-list"></div>
+        <div class="ai-note" style="margin-top:12px"><b>Connected AI seats are player seats.</b> They must receive the same visible match state a human in that seat would receive. The faction's own NPC brain is a separate in-game strategist and can also be reused inside Battle Maps. For single-player, keep at least one Faction AI opponent active.</div>
+      </section>
+
+      <aside class="panel glass">
+        <div class="section-title">Match setup</div>
+        <div class="map-card"><b id="mapName">Founder's Crossing</b><p id="mapDescription">Current stable flat skirmish battlefield. The adapter can now place up to four civilizations; extra human/network control and independent macro economies continue to mature separately.</p></div>
+
+        <div class="settings-grid" style="margin-top:12px">
+          <label><span>Map</span><select id="mapSelect"><option value="founders-crossing">Founder's Crossing</option><option value="crownworld">Crownworld (Globe)</option></select></label>
+          <label><span>Game speed</span><select id="speedSelect"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option></select></label>
+          <label><span>Starting age</span><select id="ageSelect"><option value="0">Founding Age</option><option value="1">Expansion Age</option><option value="2">Dominion Age</option></select></label>
+          <label><span>Resources</span><select id="resourceSelect"><option value="low">Low</option><option value="standard" selected>Standard</option><option value="high">High</option></select></label>
+          <label><span>Victory</span><select id="victorySelect"><option value="capital">Destroy capital</option><option value="territory">Territory control</option><option value="open">Open / sandbox</option></select></label>
+          <label><span>Seed</span><input id="seedInput" type="number" /></label>
+        </div>
+
+        <div class="section-title" style="margin-top:16px">Lobby state</div>
+        <div id="validation" class="validation"></div>
+        <div id="teamSummary" class="teams" style="margin-top:10px"></div>
+
+        <div class="launch">
+          <button id="saveBtn">Save lobby</button>
+          <a id="launchBtn" href="./skirmish.html">Launch</a>
+        </div>
+        <div class="future"><b>Current cap: 4 civilization slots.</b> The data contract keeps lobby capacity separate from map size so stable maps can later opt into 8 and 12 slots without redesigning the lobby format.</div>
+      </aside>
+    </main>
+  </div>
+  <script type="module" src="src/lobby.js"></script>
+</body>
+</html>

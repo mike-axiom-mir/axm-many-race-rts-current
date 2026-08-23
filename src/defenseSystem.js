@@ -1,5 +1,19 @@
 import * as THREE from "three";
 
+function sameTeam(world, ownerA, ownerB) {
+  if (ownerA === ownerB) return true;
+  const teams = world.__axmTeamByOwner || {};
+  return teams[ownerA] != null && teams[ownerB] != null && teams[ownerA] === teams[ownerB];
+}
+
+function ownerProjectileColor(owner) {
+  if (owner === "player") return 0x8de1ff;
+  if (owner === "enemy") return 0xff818a;
+  if (owner === "seat-3") return 0xffd66d;
+  if (owner === "seat-4") return 0xc69cff;
+  return 0xdde7ed;
+}
+
 export class DefenseSystem {
   constructor(world) {
     this.world = world;
@@ -7,8 +21,6 @@ export class DefenseSystem {
     this.projectiles = [];
     this.group = new THREE.Group();
     this.world.scene.add(this.group);
-    this.playerColor = 0x8de1ff;
-    this.enemyColor = 0xff818a;
   }
 
   reset() {
@@ -22,7 +34,7 @@ export class DefenseSystem {
     let bestDistance = range;
     for (const entity of this.world.entities) {
       if (!entity.parent || entity.userData.hp <= 0) continue;
-      if (entity.userData.owner === building.userData.owner) continue;
+      if (sameTeam(this.world, entity.userData.owner, building.userData.owner)) continue;
       if (entity.userData.type !== "squad" && entity.userData.type !== "founder") continue;
       const distance = building.position.distanceTo(entity.position);
       if (distance < bestDistance) {
@@ -37,7 +49,7 @@ export class DefenseSystem {
     const owner = building.userData.owner;
     const mesh = new THREE.Mesh(
       new THREE.SphereGeometry(.18, 7, 5),
-      new THREE.MeshBasicMaterial({ color: owner === "player" ? this.playerColor : this.enemyColor })
+      new THREE.MeshBasicMaterial({ color: ownerProjectileColor(owner) })
     );
     mesh.position.copy(building.position).add(new THREE.Vector3(0, 4.2, 0));
     this.group.add(mesh);
@@ -75,7 +87,7 @@ export class DefenseSystem {
       projectile.life -= dt;
       const target = projectile.target;
 
-      if (!target?.parent || target.userData.hp <= 0 || projectile.life <= 0) {
+      if (!target?.parent || target.userData.hp <= 0 || projectile.life <= 0 || sameTeam(this.world, projectile.owner, target.userData.owner)) {
         this.group.remove(projectile.mesh);
         projectile.mesh.geometry.dispose();
         projectile.mesh.material.dispose();

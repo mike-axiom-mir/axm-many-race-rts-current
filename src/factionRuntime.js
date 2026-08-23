@@ -42,8 +42,11 @@ export class FactionRuntime {
       ensureBaseStats(entity);
     }
 
-    this.applyOwner("player", dt, time);
-    this.applyOwner("enemy", dt, time);
+    const owners = new Set([
+      ...Object.keys(this.world.__axmFactionByOwner || {}),
+      ...this.world.entities.map(entity => entity.userData.owner).filter(Boolean)
+    ]);
+    for (const owner of owners) this.applyOwner(owner, dt, time);
   }
 
   applyOwner(owner, dt, time) {
