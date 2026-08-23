@@ -19,7 +19,7 @@ function shard(color, size = .25, emissive = 0x000000) { return shadow(new THREE
 function disc(color, radius = .22, depth = .07) { const mesh = shadow(new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, depth, 8), mat(color))); mesh.rotation.z = Math.PI / 2; return mesh; }
 function ring(color, radius = .55, tube = .05) { return shadow(new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 6, 16), mat(color))); }
 function palette(faction, enemy = false) {
-  if (enemy) return { body: 0x7a424b, accent: faction?.accent || 0xe48a90, dark: 0x38272b, light: 0xe8c3b0 };
+  if (enemy) return { body: 0x7a424b, accent: 0xe48a90, dark: 0x38272b, light: 0xe8c3b0 };
   if (faction?.id === "ironvale") return { body: 0x7896b8, accent: 0xd9e4ef, dark: 0x465564, light: 0xb8c8d8 };
   if (faction?.id === "greenwake") return { body: 0x74b87c, accent: 0xd8f0b8, dark: 0x405d42, light: 0xa8d29b };
   if (faction?.id === "ashwind") return { body: 0xc98b63, accent: 0xffd29f, dark: 0x6b4c38, light: 0xe4b07b };
@@ -35,6 +35,26 @@ function addQuiver(member, color) {
   const q = pole(color, .70, .07); q.rotation.z = .20; add(member, q, -.22, .96, .27);
   for (let i = 0; i < 3; i++) { const a = pole(0xb8a37b, .78 + i * .03, .012); a.rotation.z = .18; add(member, a, -.28 + i * .055, 1.08, .29); }
 }
+function addRangedKit(member, faction, p) {
+  if (faction.id === "greenwake") {
+    add(member, box(p.dark, .34, .30, .22), -.22, .80, .29);
+    for (let i = 0; i < 3; i++) {
+      const stone = shadow(new THREE.Mesh(new THREE.DodecahedronGeometry(.055, 0), mat(p.light)));
+      add(member, stone, -.28 + i * .08, .90 + (i % 2) * .05, .39);
+    }
+    return;
+  }
+  if (faction.id === "prismkin") {
+    for (const x of [-.22, .22]) {
+      const emitter = shard(p.accent, .16, 0x11172b);
+      emitter.scale.set(.45, 1.35, .40);
+      emitter.rotation.z = x < 0 ? -.25 : .25;
+      add(member, emitter, x, 1.10, .29);
+    }
+    return;
+  }
+  addQuiver(member, p.dark);
+}
 function addToolHarness(member, color) {
   add(member, box(color, .46, .16, .30), 0, .73, .30);
   const tool = pole(0x6e573d, .88, .025); tool.rotation.z = .45; add(member, tool, -.24, .90, .32);
@@ -43,13 +63,13 @@ function addScoutGlass(member, color) {
   const tube = pole(color, .44, .045); tube.rotation.z = Math.PI / 2; add(member, tube, .30, 1.35, -.02);
   add(member, disc(0xa8dce6, .075, .035), .51, 1.35, -.02);
 }
-function addRoleSilhouette(member, role, faction, scout = false, support = false) {
-  const p = palette(faction);
+function addRoleSilhouette(member, role, faction, enemy = false, scout = false, support = false) {
+  const p = palette(faction, enemy);
   if (role === "line") {
     addPauldron(member, p.dark, -.27); addPauldron(member, p.dark, .27);
     add(member, box(p.light, .34, .18, .10), 0, 1.02, -.25);
   } else if (role === "ranged") {
-    addQuiver(member, p.dark);
+    addRangedKit(member, faction, p);
     add(member, box(p.accent, .42, .08, .08), 0, .88, -.27);
   } else if (role === "mobile") {
     add(member, box(p.accent, .42, .10, .18), 0, .82, .28);
@@ -64,25 +84,25 @@ function addRoleSilhouette(member, role, faction, scout = false, support = false
   }
 }
 
-function addFactionMemberIdentity(member, faction, index) {
-  const p = palette(faction);
+function addFactionMemberIdentity(member, faction, index, enemy = false) {
+  const p = palette(faction, enemy);
   if (faction.id === "ironvale") {
     add(member, box(p.dark, .42, .11, .30), 0, 1.54, 0);
     const crest = box(p.accent, .08, .34, .08); crest.rotation.z = -.08; add(member, crest, 0, 1.78, 0);
   } else if (faction.id === "greenwake") {
     const mantle = new THREE.Mesh(new THREE.SphereGeometry(.31, 6, 4), mat(p.dark)); mantle.scale.set(1.22, .38, .80); add(member, mantle, 0, 1.05, .13);
-    const leaf = shard(p.accent, .15, 0x091408); leaf.scale.set(.50, 1.25, .38); leaf.rotation.z = index % 2 ? .24 : -.24; add(member, leaf, .12, 1.71, .04);
+    const leaf = shard(p.accent, .15, enemy ? 0x1a090a : 0x091408); leaf.scale.set(.50, 1.25, .38); leaf.rotation.z = index % 2 ? .24 : -.24; add(member, leaf, .12, 1.71, .04);
   } else if (faction.id === "ashwind") {
     const scarf = new THREE.Mesh(new THREE.PlaneGeometry(.52, .20), new THREE.MeshStandardMaterial({ color: p.accent, side: THREE.DoubleSide, roughness: .82 }));
     scarf.userData.wave = Math.random() * 10; scarf.rotation.y = Math.PI / 2; add(member, scarf, -.24, 1.20, .22);
-    for (const x of [-.10, .10]) add(member, disc(0x6f5a43, .065, .035), x, 1.51, -.22);
+    for (const x of [-.10, .10]) add(member, disc(enemy ? 0x533337 : 0x6f5a43, .065, .035), x, 1.51, -.22);
   } else if (faction.id === "prismkin") {
-    for (const x of [-.18, .18]) { const s = shard(p.accent, .15, 0x11172b); s.scale.set(.48, 1.28, .42); s.rotation.z = x < 0 ? -.20 : .20; add(member, s, x, 1.63, .05); }
-    const back = shard(p.body, .18, 0x15112d); back.scale.set(.45, 1.45, .35); add(member, back, 0, 1.02, .31);
+    for (const x of [-.18, .18]) { const s = shard(p.accent, .15, enemy ? 0x241015 : 0x11172b); s.scale.set(.48, 1.28, .42); s.rotation.z = x < 0 ? -.20 : .20; add(member, s, x, 1.63, .05); }
+    const back = shard(p.body, .18, enemy ? 0x281116 : 0x15112d); back.scale.set(.45, 1.45, .35); add(member, back, 0, 1.02, .31);
   }
 }
 
-function enhanceSquad(group, unitDef, faction) {
+function enhanceSquad(group, unitDef, faction, enemy = false) {
   if (!group || group.userData.__axmVisualDepth24) return;
   group.userData.__axmVisualDepth24 = true;
   const role = group.userData.combatRole || unitDef?.combat?.role || "line";
@@ -90,14 +110,14 @@ function enhanceSquad(group, unitDef, faction) {
   members.forEach((member, index) => {
     if (member.userData.__axmVisualDepth24) return;
     member.userData.__axmVisualDepth24 = true;
-    addRoleSilhouette(member, role, faction, Boolean(unitDef?.scout), Boolean(unitDef?.support));
-    addFactionMemberIdentity(member, faction, index);
+    addRoleSilhouette(member, role, faction, enemy, Boolean(unitDef?.scout), Boolean(unitDef?.support));
+    addFactionMemberIdentity(member, faction, index, enemy);
   });
 
-  const p = palette(faction);
+  const p = palette(faction, enemy);
   if (role === "siege") {
     const axle = box(p.dark, 1.55, .12, .12); add(group, axle, 0, .42, .45);
-    for (const x of [-.72, .72]) { const wheel = ring(0x554638, .25, .07); wheel.rotation.y = Math.PI / 2; add(group, wheel, x, .42, .45); }
+    for (const x of [-.72, .72]) { const wheel = ring(enemy ? 0x3b292d : 0x554638, .25, .07); wheel.rotation.y = Math.PI / 2; add(group, wheel, x, .42, .45); }
   } else if (role === "mobile") {
     const vane = box(p.accent, .75, .06, .06); vane.userData.spin = .75; add(group, vane, 0, 2.04, 0);
   }
@@ -172,7 +192,7 @@ function addFortificationDetail(building, faction, enemy) {
     const brace = box(p.dark, .18, 1.35, .16); brace.rotation.z = x < 0 ? -.35 : .35; add(building, brace, x, .72, .38);
   }
   if (building.userData.role === "gate") {
-    const crest = faction.id === "prismkin" ? shard(p.accent, .28, 0x11172b) : box(p.accent, .75, .28, .14);
+    const crest = faction.id === "prismkin" ? shard(p.accent, .28, enemy ? 0x241015 : 0x11172b) : box(p.accent, .75, .28, .14);
     crest.userData.pulse = faction.id === "greenwake" || faction.id === "prismkin"; add(building, crest, 0, 3.13, 0);
   } else {
     for (const x of [-width * .38, 0, width * .38]) add(building, box(p.accent, .42, .14, .10), x, 1.42, .47);
@@ -207,12 +227,12 @@ function enhanceCapital(capital, faction, enemy) {
   if (faction.id === "ironvale") {
     const crown = ring(p.accent, 2.15, .12); crown.rotation.x = Math.PI / 2; add(capital, crown, 0, 6.95, 0);
   } else if (faction.id === "greenwake") {
-    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; const leaf = shard(p.accent, .42, 0x102218); leaf.scale.set(.55, 1.55, .45); leaf.rotation.z = .35; leaf.rotation.y = -a; leaf.position.set(Math.cos(a) * 1.75, 6.78, Math.sin(a) * 1.75); capital.add(leaf); }
+    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; const leaf = shard(p.accent, .42, enemy ? 0x1a090a : 0x102218); leaf.scale.set(.55, 1.55, .45); leaf.rotation.z = .35; leaf.rotation.y = -a; leaf.position.set(Math.cos(a) * 1.75, 6.78, Math.sin(a) * 1.75); capital.add(leaf); }
   } else if (faction.id === "ashwind") {
     const vane = box(p.accent, 4.2, .11, .11); vane.userData.spin = .72; add(capital, vane, 0, 7.15, 0);
   } else if (faction.id === "prismkin") {
     const pivot = new THREE.Group(); pivot.position.y = 7.0; pivot.userData.spin = .48;
-    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; const s = shard(p.accent, .36, 0x11172b); s.position.set(Math.cos(a) * 2.0, Math.sin(a * 2) * .25, Math.sin(a) * 2.0); pivot.add(s); }
+    for (let i = 0; i < 5; i++) { const a = i / 5 * Math.PI * 2; const s = shard(p.accent, .36, enemy ? 0x241015 : 0x11172b); s.position.set(Math.cos(a) * 2.0, Math.sin(a * 2) * .25, Math.sin(a) * 2.0); pivot.add(s); }
     capital.add(pivot);
   }
 }
@@ -223,14 +243,14 @@ function enhanceFounder(founder, faction, enemy) {
   const p = palette(faction, enemy);
   const cape = new THREE.Mesh(new THREE.PlaneGeometry(.72, 1.05), new THREE.MeshStandardMaterial({ color: p.dark, side: THREE.DoubleSide, roughness: .88 }));
   cape.rotation.x = .10; add(founder, cape, 0, 1.15, .18);
-  const crest = faction.id === "prismkin" ? shard(p.accent, .20, 0x11172b) : box(p.accent, .12, .42, .12);
+  const crest = faction.id === "prismkin" ? shard(p.accent, .20, enemy ? 0x241015 : 0x11172b) : box(p.accent, .12, .42, .12);
   crest.userData.pulse = faction.id === "greenwake" || faction.id === "prismkin"; add(founder, crest, 0, 2.22, 0);
   addPauldron(founder, p.light, -.30); addPauldron(founder, p.light, .30);
 }
 
 RTSWorld.prototype.spawnSquad = function phase24VisualSquad(unitDef, faction, pos, enemy = false, countOverride = null) {
   const squad = previousSpawnSquad.call(this, unitDef, faction, pos, enemy, countOverride);
-  if (SUPPORTED.has(faction?.id)) enhanceSquad(squad, unitDef, faction);
+  if (SUPPORTED.has(faction?.id)) enhanceSquad(squad, unitDef, faction, enemy);
   return squad;
 };
 
