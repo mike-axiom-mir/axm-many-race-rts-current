@@ -1,9 +1,11 @@
 import { STARTER_FACTIONS } from "./starterFactions.js";
+import { WILDCARD_FACTION } from "./wildcardFaction.js";
 
 export const RESOURCE_KEYS = ["food", "wood", "stone", "gold"];
 
 export const FACTIONS = {
   ...STARTER_FACTIONS,
+  ...WILDCARD_FACTION,
 
   northpole: {
     id: "northpole",
@@ -122,5 +124,8 @@ export const AGE_DATA = [
 ];
 
 export function getFactionList() {
-  return Object.values(FACTIONS).sort((a, b) => Number(Boolean(b.starter)) - Number(Boolean(a.starter)) || a.name.localeCompare(b.name));
+  return Object.values(FACTIONS).sort((a, b) => {
+    const rank = faction => faction.starter ? 0 : faction.wildcard ? 1 : 2;
+    return rank(a) - rank(b) || a.name.localeCompare(b.name);
+  });
 }
