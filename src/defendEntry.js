@@ -9,3 +9,4 @@ import "./defendCoopSectorPatch.js";
 import "./defendMetricsPatch.js";
 import "./defendMetricsRepairCapturePatch.js";
 import "./defendCoopCombatInteropPatch.js";
+import "./defendFactionStatsPersistencePatch.js";
