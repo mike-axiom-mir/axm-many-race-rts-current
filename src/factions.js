@@ -1,6 +1,10 @@
+import { STARTER_FACTIONS } from "./starterFactions.js";
+
 export const RESOURCE_KEYS = ["food", "wood", "stone", "gold"];
 
 export const FACTIONS = {
+  ...STARTER_FACTIONS,
+
   northpole: {
     id: "northpole",
     name: "Northpole Dominion",
@@ -118,5 +122,5 @@ export const AGE_DATA = [
 ];
 
 export function getFactionList() {
-  return Object.values(FACTIONS);
+  return Object.values(FACTIONS).sort((a, b) => Number(Boolean(b.starter)) - Number(Boolean(a.starter)) || a.name.localeCompare(b.name));
 }
