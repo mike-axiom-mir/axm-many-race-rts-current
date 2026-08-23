@@ -8,13 +8,8 @@ const details = document.getElementById("factionDetails");
 const ids = Object.keys(FACTIONS);
 let selected = ids[0];
 
-function colorHex(value) {
-  return `#${Number(value || 0).toString(16).padStart(6, "0")}`;
-}
-
-function pct(value = 0) {
-  return `${Math.round(Number(value || 0) * 100)}%`;
-}
+function colorHex(value) { return `#${Number(value || 0).toString(16).padStart(6, "0")}`; }
+function pct(value = 0) { return `${Math.round(Number(value || 0) * 100)}%`; }
 
 function renderList() {
   list.innerHTML = "";
@@ -28,15 +23,22 @@ function renderList() {
   }
 }
 
+function supportText(support) {
+  if (!support) return null;
+  const amount = support.kind === "heal" ? `${support.amount}/s heal` : `${Math.round(Number(support.amount || 0) * 100)}% ${support.kind}`;
+  return `${amount} aura • radius ${support.radius}`;
+}
+
 function unitCard(faction, unit) {
   const profile = resolvedCombatProfile(unit);
   const squadSize = unit.squadSize || faction.military?.squadSize || 5;
   const role = roleCounterText(profile.role);
   const unlockAge = Number.isFinite(unit.unlockAge) ? Number(unit.unlockAge) : Math.max(0, faction.units.indexOf(unit));
+  const support = supportText(unit.support);
   return `<div class="unit">
     <b>${escapeHtml(unit.name)}</b>
     ${escapeHtml(unit.description || "")}<br>
-    <span class="muted">${escapeHtml(role)} • squad ${squadSize}</span><br>
+    <span class="muted">${escapeHtml(role)} • squad ${squadSize}${support ? ` • ${escapeHtml(support)}` : ""}</span><br>
     <span class="muted">HP/member ${unit.hp} • DMG/member ${unit.damage} • RNG ${unit.range} • SPD ${unit.speed}</span><br>
     <span class="muted">Armor ${pct(profile.armor)} • attack ${profile.attackInterval.toFixed(2)}s • unlock Age ${unlockAge + 1}</span>
   </div>`;
@@ -45,15 +47,20 @@ function unitCard(faction, unit) {
 function buildingCard(faction, building) {
   const scaledHp = building.hp ? Math.round(building.hp * (faction.building?.health || 1)) : null;
   const tower = building.role === "defense";
-  const details = [
+  const support = supportText(building.support);
+  const items = [
     building.role,
+    `Age ${Number(building.unlockAge || 0) + 1}`,
     scaledHp ? `HP ${scaledHp}` : null,
     building.armor != null ? `Armor ${pct(building.armor)}` : null,
+    building.upgradeHub ? "Upgrade hub" : null,
+    building.reinforcementPoint ? "Forward muster" : null,
+    support,
     tower && building.defense ? `DMG ${building.defense}` : null,
     tower && building.defenseRange ? `RNG ${building.defenseRange}` : null,
     tower && building.fireInterval ? `${Number(building.fireInterval).toFixed(2)}s fire` : null
   ].filter(Boolean).join(" • ");
-  return `<div class="unit"><b>${escapeHtml(building.name)}</b>${escapeHtml(building.description || "")}<br><span class="muted">${escapeHtml(details)}</span></div>`;
+  return `<div class="unit"><b>${escapeHtml(building.name)}</b>${escapeHtml(building.description || "")}<br><span class="muted">${escapeHtml(items)}</span></div>`;
 }
 
 function renderFaction() {
@@ -77,7 +84,7 @@ function renderFaction() {
     <article class="card"><h3>Faction rule</h3><p>${escapeHtml(f.special)}</p></article>
     <article class="card"><h3>Economy profile</h3>${economy}</article>
     <article class="card"><h3>Military profile</h3>${military}</article>
-    <article class="card"><h3>Combat language</h3><p><b>Line</b> checks Mobile • <b>Mobile</b> closes on Ranged • <b>Ranged</b> pressures Line • <b>Siege</b> breaks Structures. These are bonuses, not hard immunity rules.</p></article>
+    <article class="card"><h3>Combat language</h3><p><b>Line</b> checks Mobile • <b>Mobile</b> closes on Ranged • <b>Ranged</b> pressures Line • <b>Siege</b> breaks Structures. Support auras add depth without creating a fifth counter class.</p></article>
     <article class="card"><h3>Units</h3><div class="unit-grid">${units}</div></article>
     <article class="card"><h3>Buildings</h3><div class="unit-grid">${buildings}</div></article>
     <article class="card npc"><h3>Native faction NPC — ${escapeHtml(npc?.name || "Unassigned")}</h3>

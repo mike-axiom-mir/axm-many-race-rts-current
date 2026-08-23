@@ -1,5 +1,6 @@
 import { RTSWorld } from "./world.js";
 import { combatMultiplier, preferredTargetWeight, resolvedCombatProfile } from "./combatRules.js";
+import { attachSupportAura } from "./supportAuraPatch.js";
 
 const originalSpawnSquad = RTSWorld.prototype.spawnSquad;
 const originalSpawnBuilding = RTSWorld.prototype.spawnBuilding;
@@ -13,7 +14,11 @@ function sameTeam(world, ownerA, ownerB) {
 }
 
 function targetArmor(entity) {
-  return Math.max(0, Math.min(.65, Number(entity?.userData?.combatArmor || entity?.userData?.armor || 0)));
+  const data = entity?.userData || {};
+  const base = Number(data.combatArmor || data.armor || 0);
+  const support = Number(data.__axmSupportArmor || 0);
+  const faction = Number(data.__axmFactionArmor || 0);
+  return Math.max(0, Math.min(.65, base + support + faction));
 }
 
 function selectCombatTarget(world, attacker, maxDistance = Infinity) {
@@ -83,6 +88,7 @@ RTSWorld.prototype.spawnSquad = function combatDepthSquad(unitDef, faction, pos,
   group.userData.combatSummary = profile.description;
   group.userData.unitDef = unitDef?.id || null;
   applyFormationShape(group, profile.role);
+  if (unitDef?.support) attachSupportAura(group, unitDef.support);
   return group;
 };
 
@@ -93,10 +99,15 @@ RTSWorld.prototype.spawnBuilding = function combatDepthBuilding(def, faction, po
     building.userData.hp = building.userData.maxHp;
   }
   building.userData.combatArmor = Math.max(0, Math.min(.65, Number(def?.armor || 0)));
+  building.userData.unlockAge = Number(def?.unlockAge || 0);
+  building.userData.upgradeHub = Boolean(def?.upgradeHub);
+  building.userData.reinforcementPoint = Boolean(def?.reinforcementPoint);
+  building.userData.visualKind = def?.visual || null;
   if (Number(def?.defenseRange) > 0) building.userData.defenseRange = Number(def.defenseRange);
   if (Number(def?.fireInterval) > 0) building.userData.fireInterval = Number(def.fireInterval);
   if (Number(def?.projectileSpeed) > 0) building.userData.projectileSpeed = Number(def.projectileSpeed);
   if (Number(def?.projectileLifetime) > 0) building.userData.projectileLifetime = Number(def.projectileLifetime);
+  if (def?.support) attachSupportAura(building, def.support);
   return building;
 };
 
@@ -127,8 +138,9 @@ RTSWorld.prototype.updateCombat = function roleAwareCombat(entity, dt) {
     if (data.cooldown > 0) return;
     const roleMult = combatMultiplier(entity, contact.entity);
     const armorMult = 1 - targetArmor(contact.entity);
+    const supportDamage = Math.max(.5, Number(data.__axmSupportDamage || 1));
     const variance = data.combatRole === "legacy" ? (.72 + Math.random() * .20) : (.78 + Math.random() * .14);
-    const hit = Math.max(1, Number(data.damage || 0) * roleMult * armorMult * variance);
+    const hit = Math.max(1, Number(data.damage || 0) * supportDamage * roleMult * armorMult * variance);
     contact.entity.userData.hp -= hit;
     data.cooldown = Math.max(.35, Number(data.attackInterval || .85));
     if (contact.entity.userData.hp <= 0) this.removeEntity(contact.entity);

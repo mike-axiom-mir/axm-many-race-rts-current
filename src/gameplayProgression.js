@@ -17,6 +17,21 @@ export function activeBuildingIds(buildings = []) {
   return new Set(buildings.filter(building => building?.parent && building.userData?.hp > 0).map(building => building.userData?.id).filter(Boolean));
 }
 
+export function buildingUnlockAge(building) {
+  return Number.isFinite(building?.unlockAge) ? Math.max(0, Number(building.unlockAge)) : 0;
+}
+
+export function buildingAvailability(building, age = 0) {
+  const requiredAge = buildingUnlockAge(building);
+  const ageReady = Number(age || 0) >= requiredAge;
+  return { ready: ageReady, requiredAge, ageReady };
+}
+
+export function buildingAvailabilityText(building, age = 0, ageNames = []) {
+  const availability = buildingAvailability(building, age);
+  return availability.ready ? "Ready" : `Reach ${ageNames[availability.requiredAge] || `Age ${availability.requiredAge + 1}`}`;
+}
+
 export function unitAvailability({ faction, unit, age = 0, buildings = [] } = {}) {
   const requiredAge = unitUnlockAge(faction, unit);
   const requiredBuilding = unitRequiredBuilding(faction, unit);
@@ -68,12 +83,11 @@ export function chooseEnemyUnit(faction, age, buildings = []) {
   if (!available.length) return null;
   if (available.length === 1) return available[0];
 
-  // Keep the army readable and mixed: core formations remain common while later
-  // specialist formations appear often enough to matter without replacing the roster.
   const weights = available.map((unit, index) => {
-    if (index === 0) return .46;
-    if (index === 1) return .34;
-    return .20 / Math.max(1, available.length - 2);
+    if (index === 0) return .42;
+    if (index === 1) return .30;
+    if (index === 2) return .18;
+    return .10 / Math.max(1, available.length - 3);
   });
   const total = weights.reduce((sum, value) => sum + value, 0);
   let roll = Math.random() * total;
@@ -84,24 +98,28 @@ export function chooseEnemyUnit(faction, age, buildings = []) {
   return available[available.length - 1];
 }
 
-export function chooseEnemyBuilding(faction, existing = []) {
+export function chooseEnemyBuilding(faction, existing = [], age = 0) {
   const living = existing.filter(building => building?.parent && building.userData?.hp > 0);
   const roleCounts = living.reduce((counts, building) => {
     const role = building.userData?.role || "economy";
     counts[role] = (counts[role] || 0) + 1;
     return counts;
   }, {});
-  const candidates = faction?.buildings || [];
+  const candidates = (faction?.buildings || []).filter(building => buildingAvailability(building, age).ready);
+  const hub = candidates.find(building => building.upgradeHub);
+  const hubBuilt = hub && living.some(building => building.userData?.id === hub.id);
   const priorities = [
     roleCounts.military < 1 ? "military" : null,
     roleCounts.economy < 2 ? "economy" : null,
+    age >= 1 && hub && !hubBuilt ? "upgrade-hub" : null,
     roleCounts.defense < 2 ? "defense" : null,
+    roleCounts.support < 2 ? "support" : null,
     roleCounts.economy < 4 ? "economy" : null,
     roleCounts.military < 2 ? "military" : null,
     "defense"
   ].filter(Boolean);
   for (const role of priorities) {
-    const match = candidates.find(building => building.role === role);
+    const match = role === "upgrade-hub" ? hub : candidates.find(building => building.role === role);
     if (match) return match;
   }
   return candidates[0] || null;
