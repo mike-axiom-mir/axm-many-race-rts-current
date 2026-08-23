@@ -8,30 +8,16 @@ const previousUpdateDecorations = RTSWorld.prototype.updateDecorations;
 const previousResetDynamic = RTSWorld.prototype.resetDynamic;
 const previousTowerFire = DefenseSystem.prototype.fire;
 
-function clamp01(value) {
-  return Math.max(0, Math.min(1, value));
-}
-
-function easeOut(value) {
-  const t = clamp01(value);
-  return 1 - (1 - t) * (1 - t) * (1 - t);
-}
-
+function clamp01(value) { return Math.max(0, Math.min(1, value)); }
+function easeOut(value) { const t = clamp01(value); return 1 - (1 - t) * (1 - t) * (1 - t); }
 function hashString(value = "") {
   let hash = 2166136261 >>> 0;
-  for (const char of String(value)) {
-    hash ^= char.charCodeAt(0);
-    hash = Math.imul(hash, 16777619) >>> 0;
-  }
+  for (const char of String(value)) { hash ^= char.charCodeAt(0); hash = Math.imul(hash, 16777619) >>> 0; }
   return hash >>> 0;
 }
-
 function seeded(seed = 1337) {
   let state = seed >>> 0;
-  return () => {
-    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-    return state / 4294967296;
-  };
+  return () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
 }
 
 function ensureFx(world) {
@@ -81,14 +67,12 @@ function sampleEntityColor(entity) {
   return 0x68727a;
 }
 
-function charStructure(root) {
-  for (const material of materialList(root)) {
-    if (material.color?.isColor) material.color.multiplyScalar(.38);
-    if (material.emissive?.isColor) material.emissive.multiplyScalar(.18);
-    if ("roughness" in material) material.roughness = Math.max(.9, Number(material.roughness || 0));
-    if ("metalness" in material) material.metalness = Math.min(.08, Number(material.metalness || 0));
-  }
+function fxMaterial(color, emissive = 0x000000, roughness = .94) {
+  return new THREE.MeshStandardMaterial({ color, emissive, roughness, metalness: .02, flatShading: true });
 }
+function shadow(mesh) { mesh.castShadow = true; mesh.receiveShadow = true; return mesh; }
+function add(group, mesh, x = 0, y = 0, z = 0) { mesh.position.set(x, y, z); group.add(mesh); return mesh; }
+function fxBox(color, x, y, z, emissive = 0x000000) { return shadow(new THREE.Mesh(new THREE.BoxGeometry(x, y, z), fxMaterial(color, emissive))); }
 
 function syncFxVisibility(world, entry) {
   if (!entry?.root) return;
@@ -97,13 +81,8 @@ function syncFxVisibility(world, entry) {
     if (entry.initialVisible !== undefined) entry.root.visible = Boolean(entry.initialVisible);
     return;
   }
-  const friendly = typeof fog.friendlyToPlayer === "function"
-    ? fog.friendlyToPlayer(entry.owner)
-    : entry.owner === "player";
-  if (friendly) {
-    entry.root.visible = true;
-    return;
-  }
+  const friendly = typeof fog.friendlyToPlayer === "function" ? fog.friendlyToPlayer(entry.owner) : entry.owner === "player";
+  if (friendly) { entry.root.visible = true; return; }
   if (typeof fog.isPointVisible === "function") {
     entry.root.visible = fog.isPointVisible(Number(entry.worldX || 0), Number(entry.worldZ || 0));
   } else {
@@ -135,11 +114,8 @@ function triggerAttackVisual(entity) {
   const role = entity.userData.combatRole || "line";
   const duration = role === "siege" ? .46 : role === "ranged" ? .34 : role === "mobile" ? .25 : .30;
   const members = attackMembers(entity).map(member => ({
-    member,
-    rootEntity: member === entity,
-    position: member.position.clone(),
-    rotationX: member.rotation.x,
-    rotationZ: member.rotation.z
+    member, rootEntity: member === entity, position: member.position.clone(),
+    rotationX: member.rotation.x, rotationZ: member.rotation.z
   }));
   entity.userData.__axmAttackVisual = { age: 0, duration, role, members };
 }
@@ -163,10 +139,7 @@ function animateAttackVisual(entity, dt) {
       if (!entry.rootEntity) member.position.z = entry.position.z - .07 * envelope;
       member.rotation.x = entry.rotationX + .10 * envelope;
     } else if (attack.role === "mobile") {
-      if (!entry.rootEntity) {
-        member.position.z = entry.position.z + .22 * envelope;
-        member.position.y = entry.position.y + .07 * envelope;
-      }
+      if (!entry.rootEntity) { member.position.z = entry.position.z + .22 * envelope; member.position.y = entry.position.y + .07 * envelope; }
       member.rotation.x = entry.rotationX - .08 * envelope;
     } else if (attack.role === "siege") {
       if (!entry.rootEntity) member.position.z = entry.position.z + .08 * envelope;
@@ -199,15 +172,8 @@ function triggerTowerVisual(building) {
   if (!building?.userData) return;
   const previous = building.userData.__axmTowerAttackVisual;
   if (!previous) {
-    building.userData.__axmTowerAttackVisual = {
-      age: 0,
-      duration: .24,
-      scale: building.scale.clone(),
-      rotationX: building.rotation.x
-    };
-  } else {
-    previous.age = 0;
-  }
+    building.userData.__axmTowerAttackVisual = { age: 0, duration: .24, scale: building.scale.clone(), rotationX: building.rotation.x };
+  } else previous.age = 0;
 }
 
 function animateTowerVisual(building, dt) {
@@ -227,7 +193,7 @@ function animateTowerVisual(building, dt) {
 
 function spawnMuzzleFlash(world, building) {
   const fx = ensureFx(world);
-  const color = building.userData.owner === "enemy" ? 0xff7e72 : 0x9de9ff;
+  const color = building.userData.owner === "enemy" ? 0xff7e72 : building.userData.owner === "seat-3" ? 0xffd66d : building.userData.owner === "seat-4" ? 0xc69cff : 0x9de9ff;
   const mesh = new THREE.Mesh(
     new THREE.OctahedronGeometry(.28, 0),
     new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .92, depthWrite: false })
@@ -241,28 +207,122 @@ function spawnMuzzleFlash(world, building) {
   });
 }
 
+function makeDeathSoldier(color, founder = false) {
+  const group = new THREE.Group();
+  const base = new THREE.Color(color || 0x68727a).multiplyScalar(.72);
+  const dark = base.clone().multiplyScalar(.48);
+  const body = shadow(new THREE.Mesh(
+    new THREE.CylinderGeometry(founder ? .31 : .23, founder ? .37 : .29, founder ? 1.12 : .88, 7),
+    fxMaterial(base)
+  ));
+  body.position.y = founder ? .84 : .67;
+  const head = shadow(new THREE.Mesh(
+    new THREE.SphereGeometry(founder ? .29 : .22, 7, 5),
+    fxMaterial(0xb38e72)
+  ));
+  head.position.y = founder ? 1.58 : 1.25;
+  const weapon = fxBox(dark, .08, founder ? 1.20 : .86, .08);
+  weapon.position.set(.33, founder ? .84 : .69, 0);
+  weapon.rotation.z = -.42;
+  group.add(body, head, weapon);
+  return group;
+}
+
+function makeUnitDeathProxy(entity) {
+  const root = new THREE.Group();
+  root.name = `death-${entity.userData.id || entity.userData.type}`;
+  root.position.copy(entity.position);
+  root.rotation.y = entity.rotation.y;
+  root.visible = entity.visible;
+  const color = sampleEntityColor(entity);
+  const founder = entity.userData.type === "founder";
+  const sourceMembers = founder ? [null] : attackMembers(entity);
+  const members = [];
+  const count = sourceMembers.length || 1;
+
+  for (let index = 0; index < count; index++) {
+    const source = sourceMembers[index];
+    const proxy = makeDeathSoldier(color, founder);
+    if (source) {
+      proxy.position.copy(source.position);
+      proxy.scale.copy(source.scale);
+      proxy.rotation.y = source.rotation.y;
+    }
+    root.add(proxy);
+    members.push({
+      member: proxy,
+      position: proxy.position.clone(),
+      rotationX: proxy.rotation.x,
+      rotationZ: proxy.rotation.z,
+      direction: index % 2 ? -1 : 1,
+      delay: Math.min(.28, index * .045)
+    });
+  }
+  return { root, members };
+}
+
+function makeStructureCollapseProxy(entity, sourceColor) {
+  const root = new THREE.Group();
+  root.name = `collapse-${entity.userData.id || entity.userData.type}`;
+  root.position.copy(entity.position);
+  root.rotation.y = entity.rotation.y;
+  root.visible = entity.visible;
+  const color = new THREE.Color(sourceColor || 0x68727a).multiplyScalar(.34);
+  const dark = color.clone().multiplyScalar(.52);
+  const type = entity.userData.type;
+  const role = entity.userData.role;
+
+  if (type === "capital") {
+    const base = shadow(new THREE.Mesh(new THREE.CylinderGeometry(3.6, 4.2, .72, 8), fxMaterial(dark))); base.position.y = .36;
+    const keep = fxBox(color, 4.6, 4.0, 4.6); keep.position.y = 2.75;
+    const roof = shadow(new THREE.Mesh(new THREE.ConeGeometry(3.2, 1.8, 8), fxMaterial(dark))); roof.position.y = 5.65;
+    root.add(base, keep, roof);
+  } else if (entity.userData.fortification) {
+    const cfg = entity.userData.fortification;
+    const width = Math.max(3.2, Number(cfg.width || 5.4));
+    const depth = Math.max(.65, Number(cfg.depth || .85));
+    if (role === "gate") {
+      const pillarW = width * .28;
+      add(root, fxBox(color, pillarW, 2.6, depth), -width * .32, 1.3, 0);
+      add(root, fxBox(color, pillarW, 2.6, depth), width * .32, 1.3, 0);
+      add(root, fxBox(dark, width * .78, .46, depth * 1.12), 0, 2.5, 0);
+    } else {
+      add(root, fxBox(color, width, 2.35, depth), 0, 1.18, 0);
+    }
+  } else if (role === "defense") {
+    const tower = shadow(new THREE.Mesh(new THREE.CylinderGeometry(1.08, 1.42, 4.5, 8), fxMaterial(color))); tower.position.y = 2.5;
+    const crown = shadow(new THREE.Mesh(new THREE.ConeGeometry(1.55, 1.25, 8), fxMaterial(dark))); crown.position.y = 5.15;
+    root.add(tower, crown);
+  } else {
+    const hall = fxBox(color, 3.6, 2.3, 3.15); hall.position.y = 1.25;
+    const roof = shadow(new THREE.Mesh(new THREE.ConeGeometry(2.75, 1.45, 4), fxMaterial(dark))); roof.position.y = 3.25; roof.rotation.y = Math.PI / 4;
+    root.add(hall, roof);
+  }
+
+  const ember = new THREE.Mesh(
+    new THREE.OctahedronGeometry(type === "capital" ? .28 : .18, 0),
+    new THREE.MeshBasicMaterial({ color: 0xff8b4d, transparent: true, opacity: .82, depthWrite: false })
+  );
+  ember.position.y = type === "capital" ? 3.1 : role === "defense" ? 2.8 : 1.6;
+  ember.userData.pulse = true;
+  root.add(ember);
+  return root;
+}
+
 function prepareUnitDeath(world, entity) {
   const fx = ensureFx(world);
   restoreAttackVisual(entity);
-  entity.userData.target = null;
   const visible = entity.visible;
-  fx.group.add(entity);
-  entity.visible = visible;
-
-  const members = attackMembers(entity).map((member, index) => ({
-    member,
-    position: member.position.clone(),
-    rotationX: member.rotation.x,
-    rotationZ: member.rotation.z,
-    direction: index % 2 ? -1 : 1,
-    delay: Math.min(.28, index * .045)
-  }));
+  const worldX = entity.position.x, worldZ = entity.position.z;
+  const proxy = makeUnitDeathProxy(entity);
+  fx.group.add(proxy.root);
   fx.entries.push({
-    kind: "unit-death", root: entity, age: 0,
+    kind: "unit-death", root: proxy.root, age: 0,
     duration: entity.userData.type === "founder" ? 2.8 : 2.3,
-    members, owner: entity.userData.owner,
-    worldX: entity.position.x, worldZ: entity.position.z, initialVisible: visible
+    members: proxy.members, owner: entity.userData.owner,
+    worldX, worldZ, initialVisible: visible
   });
+  disposeRoot(world, entity);
 }
 
 function prepareStructureDeath(world, entity) {
@@ -270,19 +330,20 @@ function prepareStructureDeath(world, entity) {
   restoreTowerVisual(entity);
   const visible = entity.visible;
   const sourceColor = sampleEntityColor(entity);
-  charStructure(entity);
-  fx.group.add(entity);
-  entity.visible = visible;
+  const worldX = entity.position.x, worldZ = entity.position.z;
+  const proxy = makeStructureCollapseProxy(entity, sourceColor);
+  fx.group.add(proxy);
   fx.entries.push({
-    kind: "structure-collapse", root: entity, age: 0,
+    kind: "structure-collapse", root: proxy, age: 0,
     duration: entity.userData.type === "capital" ? 1.55 : entity.userData.fortification ? .78 : 1.15,
-    basePosition: entity.position.clone(), baseScale: entity.scale.clone(),
-    baseRotationX: entity.rotation.x, baseRotationZ: entity.rotation.z,
-    direction: hashString(`${entity.userData.id || entity.userData.type}:${entity.position.x}:${entity.position.z}`) % 2 ? -1 : 1,
+    basePosition: proxy.position.clone(), baseScale: proxy.scale.clone(),
+    baseRotationX: proxy.rotation.x, baseRotationZ: proxy.rotation.z,
+    direction: hashString(`${entity.userData.id || entity.userData.type}:${worldX}:${worldZ}`) % 2 ? -1 : 1,
     sourceColor, visible, sourceType: entity.userData.type, role: entity.userData.role,
     radius: Number(entity.userData.radius || 2.4), sourceId: entity.userData.id || entity.userData.type,
-    owner: entity.userData.owner, worldX: entity.position.x, worldZ: entity.position.z, initialVisible: visible
+    owner: entity.userData.owner, worldX, worldZ, initialVisible: visible
   });
+  disposeRoot(world, entity);
 }
 
 function makeWreck(world, entry) {
@@ -301,10 +362,7 @@ function makeWreck(world, entry) {
     new THREE.CylinderGeometry(Math.max(.9, entry.radius * .62), Math.max(1.1, entry.radius * .78), .28, 8),
     new THREE.MeshStandardMaterial({ color: dark, roughness: 1, metalness: 0, flatShading: true })
   );
-  slab.position.y = .13;
-  slab.rotation.y = rng() * Math.PI;
-  slab.receiveShadow = true;
-  wreck.add(slab);
+  slab.position.y = .13; slab.rotation.y = rng() * Math.PI; slab.receiveShadow = true; wreck.add(slab);
 
   for (let index = 0; index < rubbleCount; index++) {
     const size = .35 + rng() * (entry.sourceType === "capital" ? .85 : .60);
@@ -312,13 +370,10 @@ function makeWreck(world, entry) {
       rng() > .45 ? new THREE.BoxGeometry(size * 1.5, size * .7, size) : new THREE.DodecahedronGeometry(size * .65, 0),
       new THREE.MeshStandardMaterial({ color: index % 3 ? base : dark, roughness: 1, metalness: .01, flatShading: true })
     );
-    const angle = rng() * Math.PI * 2;
-    const distance = .35 + rng() * spread;
+    const angle = rng() * Math.PI * 2, distance = .35 + rng() * spread;
     mesh.position.set(Math.cos(angle) * distance, .20 + rng() * .34, Math.sin(angle) * distance);
     mesh.rotation.set((rng() - .5) * .8, rng() * Math.PI, (rng() - .5) * .8);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    wreck.add(mesh);
+    mesh.castShadow = true; mesh.receiveShadow = true; wreck.add(mesh);
   }
 
   for (let index = 0; index < 3; index++) {
@@ -327,9 +382,7 @@ function makeWreck(world, entry) {
       new THREE.MeshBasicMaterial({ color: 0x2c3032, transparent: true, opacity: .24, depthWrite: false })
     );
     smoke.position.set((rng() - .5) * 1.3, .55 + index * .28, (rng() - .5) * 1.3);
-    smoke.userData.__axmSmokeBase = smoke.position.clone();
-    smoke.userData.__axmSmokePhase = rng() * Math.PI * 2;
-    wreck.add(smoke);
+    smoke.userData.__axmSmokeBase = smoke.position.clone(); smoke.userData.__axmSmokePhase = rng() * Math.PI * 2; wreck.add(smoke);
   }
 
   for (let index = 0; index < 3; index++) {
@@ -337,9 +390,7 @@ function makeWreck(world, entry) {
       new THREE.OctahedronGeometry(.08 + rng() * .06, 0),
       new THREE.MeshBasicMaterial({ color: 0xff8b4d, transparent: true, opacity: .82, depthWrite: false })
     );
-    ember.position.set((rng() - .5) * 1.25, .30 + rng() * .32, (rng() - .5) * 1.25);
-    ember.userData.pulse = true;
-    wreck.add(ember);
+    ember.position.set((rng() - .5) * 1.25, .30 + rng() * .32, (rng() - .5) * 1.25); ember.userData.pulse = true; wreck.add(ember);
   }
 
   fx.group.add(wreck);
@@ -362,61 +413,44 @@ function updateFx(world, time, dt) {
     if (entry.kind === "flash") {
       entry.root.scale.setScalar(1 + progress * 1.6);
       entry.root.material.opacity = .92 * (1 - progress);
-      if (progress >= 1) {
-        disposeRoot(world, entry.root);
-        fx.entries.splice(index, 1);
-      }
+      if (progress >= 1) { disposeRoot(world, entry.root); fx.entries.splice(index, 1); }
       continue;
     }
 
     if (entry.kind === "unit-death") {
       for (const memberEntry of entry.members) {
-        const local = clamp01((entry.age - memberEntry.delay) / .68);
-        const fall = easeOut(local);
-        const member = memberEntry.member;
+        const local = clamp01((entry.age - memberEntry.delay) / .68), fall = easeOut(local), member = memberEntry.member;
         member.position.set(memberEntry.position.x + memberEntry.direction * .10 * fall, memberEntry.position.y - .12 * fall, memberEntry.position.z);
         member.rotation.x = memberEntry.rotationX + .12 * fall;
         member.rotation.z = memberEntry.rotationZ + memberEntry.direction * 1.34 * fall;
       }
       const fade = progress < .55 ? 1 : 1 - (progress - .55) / .45;
       setRootOpacity(entry.root, fade);
-      if (progress >= 1) {
-        disposeRoot(world, entry.root);
-        fx.entries.splice(index, 1);
-      }
+      if (progress >= 1) { disposeRoot(world, entry.root); fx.entries.splice(index, 1); }
       continue;
     }
 
     if (entry.kind === "structure-collapse") {
       const collapse = easeOut(progress);
-      entry.root.position.copy(entry.basePosition);
-      entry.root.position.y -= .22 * collapse;
+      entry.root.position.copy(entry.basePosition); entry.root.position.y -= .22 * collapse;
       entry.root.scale.set(entry.baseScale.x * (1 + .05 * collapse), entry.baseScale.y * (1 - .44 * collapse), entry.baseScale.z * (1 + .04 * collapse));
       entry.root.rotation.x = entry.baseRotationX + .06 * collapse;
       entry.root.rotation.z = entry.baseRotationZ + entry.direction * .14 * collapse;
-      if (progress >= 1) {
-        makeWreck(world, entry);
-        disposeRoot(world, entry.root);
-        fx.entries.splice(index, 1);
-      }
+      if (progress >= 1) { makeWreck(world, entry); disposeRoot(world, entry.root); fx.entries.splice(index, 1); }
       continue;
     }
 
     if (entry.kind === "wreck") {
       entry.root.traverse(object => {
         if (!object.userData?.__axmSmokeBase) return;
-        const base = object.userData.__axmSmokeBase;
-        const phase = object.userData.__axmSmokePhase || 0;
+        const base = object.userData.__axmSmokeBase, phase = object.userData.__axmSmokePhase || 0;
         const cycle = (entry.age * .28 + phase / (Math.PI * 2)) % 1;
         object.position.set(base.x + Math.sin(time * .7 + phase) * .16, base.y + cycle * 2.3, base.z + Math.cos(time * .6 + phase) * .14);
         if (object.material) object.material.opacity = .24 * (1 - cycle) * (progress > .78 ? (1 - progress) / .22 : 1);
         object.scale.setScalar(.8 + cycle * 1.45);
       });
       if (progress > .78) setRootOpacity(entry.root, Math.max(0, (1 - progress) / .22));
-      if (progress >= 1) {
-        disposeRoot(world, entry.root);
-        fx.entries.splice(index, 1);
-      }
+      if (progress >= 1) { disposeRoot(world, entry.root); fx.entries.splice(index, 1); }
     }
   }
 }
