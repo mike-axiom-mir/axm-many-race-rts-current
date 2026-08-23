@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="theme-color" content="#081018" />
+  <title>AXM Many-Race RTS — Scenario Studio</title>
+  <link rel="stylesheet" href="scenario.css" />
+</head>
+<body>
+  <div id="studio">
+    <header class="topbar glass">
+      <div class="brand">
+        <a class="brand-mark" href="./index.html">AXM</a>
+        <div><h1>Scenario Studio</h1><p>Decoration • surface skins • rules • campaigns • flat + globe</p></div>
+      </div>
+      <div class="top-actions">
+        <a class="link-btn" href="./builder.html">WORLD BUILDER</a>
+        <button id="importBtn">Import map</button>
+        <button id="exportBtn" class="primary">Export scenario</button>
+        <button id="playBtn">Play globe</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="viewportWrap">
+        <div id="viewport"></div>
+        <div class="viewport-badge glass"><strong id="mapBadge">FLAT</strong><span id="coordReadout">x 0 · z 0</span></div>
+        <div id="hint" class="hint glass">Import a map or decorate the default world.</div>
+      </section>
+
+      <aside class="left-panel glass scroll">
+        <section>
+          <div class="eyebrow">AUTHORING LAYER</div>
+          <div class="tabs" id="modeTabs">
+            <button data-mode="decorate" class="active">Decorate</button>
+            <button data-mode="surface">Surface</button>
+            <button data-mode="zones">Zones</button>
+            <button data-mode="campaign">Campaign</button>
+          </div>
+        </section>
+
+        <section id="decoratePanel">
+          <div class="section-title">Decoration library</div>
+          <label>Category<select id="decorCategory"></select></label>
+          <div id="decorPalette" class="palette"></div>
+          <p class="subtle">Choose an asset, then click the world. Decoration objects can carry ownership, tags and scenario rules.</p>
+        </section>
+
+        <section id="surfacePanel" class="hidden">
+          <div class="section-title">Tile / surface skins</div>
+          <div id="skinPalette" class="palette"></div>
+          <div class="grid2">
+            <label>Brush radius<input id="brushRadius" type="number" value="6" min="1" max="50" step="1" /></label>
+            <label>Tint<input id="brushTint" type="color" value="#ffffff" /></label>
+          </div>
+          <label>Opacity<input id="brushOpacity" type="range" min="0.1" max="1" value="0.7" step="0.05" /></label>
+          <p class="subtle">Surface paint is data, not baked art: skins can later change visuals, movement, hazards or campaign logic.</p>
+        </section>
+
+        <section id="zonesPanel" class="hidden">
+          <div class="section-title">Rule zones</div>
+          <div id="zonePalette" class="palette"></div>
+          <label>Zone radius<input id="zoneRadius" type="number" value="8" min="1" max="60" step="1" /></label>
+          <p class="subtle">Zones can become no-build areas, ambushes, objectives, safe areas, weather regions or any custom trigger.</p>
+        </section>
+
+        <section id="campaignPanel" class="hidden">
+          <div class="section-title">Campaign metadata</div>
+          <label class="check"><input id="campaignEnabled" type="checkbox" /> Campaign mission enabled</label>
+          <div class="grid2">
+            <label>Campaign ID<input id="campaignId" /></label>
+            <label>Chapter ID<input id="chapterId" /></label>
+          </div>
+          <label>Mission ID<input id="missionId" /></label>
+          <label>Mission title<input id="missionTitle" /></label>
+          <label>Briefing<textarea id="briefing" rows="4"></textarea></label>
+          <label>Victory text<textarea id="victoryText" rows="2"></textarea></label>
+          <label>Defeat text<textarea id="defeatText" rows="2"></textarea></label>
+          <div class="grid2">
+            <label>Starting age<input id="startingAge" type="number" min="0" max="3" value="0" /></label>
+            <label>Next map ID<input id="nextMapId" /></label>
+          </div>
+          <button id="addObjectiveBtn" class="wide">+ Objective</button>
+          <div id="objectiveList" class="stack"></div>
+        </section>
+
+        <section>
+          <div class="section-title">Placement</div>
+          <div class="toolbar">
+            <button id="selectTool" class="active">Select / rotate</button>
+            <button id="eraseTool">Erase</button>
+          </div>
+          <button id="undoBtn" class="wide">Undo</button>
+        </section>
+      </aside>
+
+      <aside class="right-panel glass scroll">
+        <section>
+          <div class="section-head"><div><div class="eyebrow">SCENARIO CONTENT</div><h2 id="contentCount">0 authored objects</h2></div></div>
+          <div id="objectList" class="object-list"></div>
+        </section>
+
+        <section id="inspector" class="hidden">
+          <div class="section-title">Object inspector</div>
+          <div id="inspectorBody"></div>
+          <div class="section-title">Object rules</div>
+          <div id="objectRules" class="stack"></div>
+          <button id="addObjectRuleBtn" class="wide">+ Rule on this object</button>
+          <button id="deleteSelectedBtn" class="wide danger">Delete selected</button>
+        </section>
+
+        <section>
+          <div class="section-title">Global map rules</div>
+          <div id="globalRules" class="stack"></div>
+          <button id="addGlobalRuleBtn" class="wide">+ Global rule</button>
+        </section>
+
+        <section>
+          <div class="section-title">Map variables</div>
+          <p class="subtle">One per line: <code>key=value</code>. Rules can read and change these.</p>
+          <textarea id="variablesText" rows="5" placeholder="reinforcements=0\nbridge_open=false"></textarea>
+        </section>
+
+        <section>
+          <div class="section-title">Validation</div>
+          <div id="validation"></div>
+          <button id="copyBtn" class="wide">Copy scenario JSON</button>
+          <input id="fileInput" type="file" accept="application/json,.json" hidden />
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}</script>
+  <script type="module" src="src/scenarioStudio.js"></script>
+</body>
+</html>
