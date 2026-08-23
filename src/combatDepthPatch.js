@@ -1,6 +1,7 @@
 import { RTSWorld } from "./world.js";
 import { combatMultiplier, preferredTargetWeight, resolvedCombatProfile } from "./combatRules.js";
 import { attachSupportAura } from "./supportAuraPatch.js";
+import { firstLineOfSightBlocker } from "./fortificationLineOfSight.js";
 
 const originalSpawnSquad = RTSWorld.prototype.spawnSquad;
 const originalSpawnBuilding = RTSWorld.prototype.spawnBuilding;
@@ -30,6 +31,10 @@ function selectCombatTarget(world, attacker, maxDistance = Infinity) {
     if (!target.userData.owner || sameTeam(world, attacker.userData.owner, target.userData.owner)) continue;
     const distance = attacker.position.distanceTo(target.position) - (target.userData.radius || 0);
     if (distance > maxDistance) continue;
+
+    const blocker = firstLineOfSightBlocker(world, attacker, target, { ignore: [attacker, target] });
+    if (blocker) continue;
+
     const score = distance * preferredTargetWeight(attacker, target);
     if (score < bestScore) {
       best = target;
