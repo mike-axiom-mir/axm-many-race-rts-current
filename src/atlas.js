@@ -74,7 +74,7 @@ function renderDetail(entry) {
     ${tags.length ? `<div class="tags">${tags.map(tag => `<span class="tag">${esc(tag)}</span>`).join("")}</div>` : ""}
     ${stats.length ? `<div class="stats">${stats.map(([key,value]) => `<div class="stat"><span>${esc(key)}</span><b>${esc(value)}</b></div>`).join("")}</div>` : ""}
     ${(entry.sections || []).map(section => `<section class="section"><h3>${esc(section.title)}</h3><p>${esc(section.body)}</p></section>`).join("")}
-    <section class="section"><h3>Atlas source</h3><p>${entry.source === "custom" ? "Imported/custom content registered with the local Atlas." : "Generated from current game data. If the source data changes, Atlas changes with it."}</p></section>`;
+    <section class="section"><h3>Atlas source</h3><p>Atlas is a reader, not the source authority. This entry was generated or registered from game/content data under source key <b>${esc(entry.source || "unspecified")}</b>.</p></section>`;
 }
 
 function render() {
