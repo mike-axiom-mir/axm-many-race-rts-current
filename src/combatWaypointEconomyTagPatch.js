@@ -3,8 +3,8 @@ import { RTSWorld } from "./world.js";
 const previousSpawnSquad = RTSWorld.prototype.spawnSquad;
 const ECONOMY_ROLES = new Set(["economy", "economic", "worker", "civilian", "villager", "gatherer", "trader", "merchant", "laborer", "labourer"]);
 
-RTSWorld.prototype.spawnSquad = function combatWaypointTaggedSpawn(def, faction, pos, enemy = false) {
-  const entity = previousSpawnSquad.call(this, def, faction, pos, enemy);
+RTSWorld.prototype.spawnSquad = function combatWaypointTaggedSpawn(def, faction, pos, enemy = false, countOverride = null) {
+  const entity = previousSpawnSquad.call(this, def, faction, pos, enemy, countOverride);
   if (!entity?.userData || !def) return entity;
 
   const role = String(def.strategicRole || def.unitRole || def.role || "").toLowerCase();
