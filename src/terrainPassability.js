@@ -187,15 +187,27 @@ class MinHeap {
   }
 }
 
+function chainMovementCost(map, anchor, points, startIndex, endIndex, options) {
+  let cost = terrainSegmentMovementCost(map, anchor, points[startIndex], options);
+  for (let index = startIndex + 1; index <= endIndex; index++) {
+    cost += terrainSegmentMovementCost(map, points[index - 1], points[index], options);
+  }
+  return cost;
+}
+
 function simplifyRoute(map, start, points, options) {
   if (!points.length) return [];
   const simplified = [];
   let anchor = pointOf(start);
   let index = 0;
+  const shortcutTolerance = Math.max(1, Number(options.surfaceShortcutTolerance || 1.04));
   while (index < points.length) {
     let farthest = index;
     for (let candidate = points.length - 1; candidate >= index; candidate--) {
-      if (terrainSegmentWalkable(map, anchor, points[candidate], options)) {
+      if (!terrainSegmentWalkable(map, anchor, points[candidate], options)) continue;
+      const directCost = terrainSegmentMovementCost(map, anchor, points[candidate], options);
+      const routedCost = chainMovementCost(map, anchor, points, index, candidate, options);
+      if (directCost <= routedCost * shortcutTolerance) {
         farthest = candidate;
         break;
       }
