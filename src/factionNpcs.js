@@ -69,7 +69,8 @@ export const FACTION_NPCS = {
     }
   },
   clockworkOrchard: {
-    id: "clockworkOrchard",
+    id: "npc-clockwork-gardener",
+    factionId: "clockworkOrchard",
     name: "The Orchard Tactician",
     role: "Native faction strategist",
     summary: "Fewer formations, stronger positions, careful resource timing and deliberate high-value engagements.",
