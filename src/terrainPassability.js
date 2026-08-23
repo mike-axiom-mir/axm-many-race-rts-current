@@ -1,7 +1,10 @@
 import { flatHeightAt } from "./mapVisuals.js";
+import { skinById } from "./worldCatalog.js";
 
 export const DEFAULT_MAX_WALK_SLOPE = .58;
 export const DEFAULT_ROUTE_GRID = 2.2;
+export const MIN_SURFACE_MOVEMENT = .30;
+export const MAX_SURFACE_MOVEMENT = 1.30;
 
 function pointOf(value) {
   if (Array.isArray(value)) return { x: Number(value[0] || 0), z: Number(value[2] || 0) };
@@ -12,6 +15,10 @@ function pointOf(value) {
 function distance2d(a, b) {
   const pa = pointOf(a), pb = pointOf(b);
   return Math.hypot(pa.x - pb.x, pa.z - pb.z);
+}
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
 
 function boundsFor(map, margin = .7) {
@@ -63,6 +70,45 @@ export function movementPassageAt(map, x, z) {
     if (isMovementPassage(paint) && paintContains(paint, x, z)) return paint;
   }
   return null;
+}
+
+export function movementSurfaceAt(map, x, z) {
+  const paints = map?.surfacePaint || [];
+  // Later surfaces render over earlier surfaces, so movement follows the same
+  // authoring order when multiple painted regions overlap.
+  for (let index = paints.length - 1; index >= 0; index--) {
+    const paint = paints[index];
+    if (paint?.enabled === false || !paintContains(paint, x, z, 0)) continue;
+    return paint;
+  }
+  return null;
+}
+
+export function terrainMovementMultiplierAt(map, x, z) {
+  const paint = movementSurfaceAt(map, x, z);
+  if (!paint) return 1;
+  const custom = Number(paint.movementMultiplier);
+  if (Number.isFinite(custom) && custom > 0) return clamp(custom, MIN_SURFACE_MOVEMENT, MAX_SURFACE_MOVEMENT);
+  const skin = skinById(paint.skin || "grassland");
+  return clamp(Number(skin?.movement ?? 1), MIN_SURFACE_MOVEMENT, MAX_SURFACE_MOVEMENT);
+}
+
+export function terrainSegmentMovementCost(map, from, to, options = {}) {
+  const a = pointOf(from), b = pointOf(to);
+  const dx = b.x - a.x, dz = b.z - a.z;
+  const distance = Math.hypot(dx, dz);
+  if (distance < .001) return 0;
+  const spacing = Math.max(.45, Number(options.costSampleSpacing || 1));
+  const steps = Math.max(1, Math.ceil(distance / spacing));
+  const stepDistance = distance / steps;
+  let cost = 0;
+  for (let step = 0; step < steps; step++) {
+    const t = (step + .5) / steps;
+    const x = a.x + dx * t;
+    const z = a.z + dz * t;
+    cost += stepDistance / terrainMovementMultiplierAt(map, x, z);
+  }
+  return cost;
 }
 
 export function terrainSlopeAt(map, x, z, options = {}) {
@@ -214,19 +260,20 @@ export function findTerrainRoute(map, from, to, options = {}) {
   const gScore = new Map();
   const cameFrom = new Map();
   const startKey = keyOf(startNode.ix, startNode.iz);
-  const startH = distance2d(startNode.point, goal);
-  gScore.set(startKey, 0);
-  open.push({ key: startKey, ix: startNode.ix, iz: startNode.iz, g: 0, f: startH });
+  const startH = distance2d(startNode.point, goal) / MAX_SURFACE_MOVEMENT;
+  const startCost = terrainSegmentMovementCost(map, start, startNode.point, options);
+  gScore.set(startKey, startCost);
+  open.push({ key: startKey, ix: startNode.ix, iz: startNode.iz, g: startCost, f: startCost + startH });
 
   const neighborSteps = [
-    [1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1],
-    [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2]
+    [1, 0], [-1, 0], [0, 1], [0, -1],
+    [1, 1], [1, -1], [-1, 1], [-1, -1]
   ];
   let expanded = 0;
   let endKey = null;
   let bestKey = startKey;
   let bestPoint = startNode.point;
-  let bestH = startH;
+  let bestH = distance2d(startNode.point, goal);
 
   while (open.size && expanded < maxExpanded) {
     const current = open.pop();
@@ -244,17 +291,18 @@ export function findTerrainRoute(map, from, to, options = {}) {
       break;
     }
 
-    for (const [dx, dz, scale] of neighborSteps) {
+    for (const [dx, dz] of neighborSteps) {
       const ix = current.ix + dx, iz = current.iz + dz;
       if (ix < 0 || iz < 0 || ix >= cols || iz >= rows || !walkableNode(ix, iz)) continue;
       const nextPoint = pointFor(ix, iz);
       if (!terrainSegmentWalkable(map, currentPoint, nextPoint, options)) continue;
       const key = keyOf(ix, iz);
-      const tentative = current.g + grid * scale;
+      const edgeCost = terrainSegmentMovementCost(map, currentPoint, nextPoint, options);
+      const tentative = current.g + edgeCost;
       if (tentative >= (gScore.get(key) ?? Infinity)) continue;
       cameFrom.set(key, current.key);
       gScore.set(key, tentative);
-      const heuristic = distance2d(nextPoint, goal);
+      const heuristic = distance2d(nextPoint, goal) / MAX_SURFACE_MOVEMENT;
       open.push({ key, ix, iz, g: tentative, f: tentative + heuristic });
     }
   }
