@@ -53,6 +53,14 @@ export const MAPS = {
 
 applyMapVisualPresets(MAPS);
 
+// Preset authoring treats 0° as north/south. Plane strips are x-axis native,
+// so convert the built-in preset data once when the registry is constructed.
+for (const map of Object.values(MAPS)) {
+  for (const paint of map.surfacePaint || []) {
+    if (paint.shape === "strip") paint.rotation = Number(paint.rotation || 0) + 90;
+  }
+}
+
 export const DEFAULT_MAP = MAPS.foundersCrossing;
 
 export function getMapList() {
