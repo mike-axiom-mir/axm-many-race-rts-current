@@ -16,6 +16,7 @@ import "./combatDeathVisualPatch.js";
 import "./factionPowerSystem.js";
 import "./factionPowerEconomyScopePatch.js";
 import "./factionPowerAiPatch.js";
+import "./factionPowerHudPatch.js";
 import "./multiSeatPatch.js";
 import "./mapSeatStartPatch.js";
 import "./seatCommandAuthorityPatch.js";
