@@ -1,8 +1,11 @@
 import "./selectedMapPatch.js";
+import "./scoutRegistryPatch.js";
 import "./mapVisualRuntimePatch.js";
 import "./mapReliefPatch.js";
 import "./combatDepthPatch.js";
 import "./rosterAnimationPatch.js";
+import "./unitBuildingVisualPatch.js";
+import "./fogOfWarPatch.js";
 import "./battlePatch.js";
 import "./multiSeatPatch.js";
 import "./mapSeatStartPatch.js";
