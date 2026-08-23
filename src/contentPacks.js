@@ -1,5 +1,8 @@
 import { FACTIONS } from "./factions.js";
 import { factionNpcFor } from "./factionNpcs.js";
+import { applyDefenseRosterExpansion } from "./defenseRosterExpansion.js";
+
+applyDefenseRosterExpansion(FACTIONS);
 
 export const CONTENT_PACK_VERSION = 1;
 
