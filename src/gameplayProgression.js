@@ -44,6 +44,13 @@ export function availabilityText({ faction, unit, age = 0, buildings = [], ageNa
   return requirements.join(" • ");
 }
 
+export function trainingTimeForUnit(unit, faction) {
+  if (Number.isFinite(unit?.trainTime)) return Math.max(2, Number(unit.trainTime));
+  const rawCost = Object.values(unit?.cost || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+  const squadSize = Number(faction?.military?.squadSize || 5);
+  return Math.max(7, Math.min(16, 5.8 + rawCost / 34 + squadSize * .42));
+}
+
 export function enemyAllocationForFaction(faction) {
   const economy = faction?.economy || {};
   const raw = {
