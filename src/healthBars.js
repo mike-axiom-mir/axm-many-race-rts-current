@@ -62,9 +62,15 @@ export class HealthBarSystem {
 
     for (const entity of living) {
       const data = entity.userData;
+      const fogHidden = entity.visible === false || data.__axmFogHidden;
+      let bar = this.bars.get(entity);
+      if (fogHidden) {
+        if (bar) bar.root.visible = false;
+        continue;
+      }
+
       const damaged = data.hp < data.maxHp * .995;
       const alwaysShow = data.type === "capital";
-      let bar = this.bars.get(entity);
 
       if (!damaged && !alwaysShow) {
         if (bar) bar.root.visible = false;
@@ -81,11 +87,8 @@ export class HealthBarSystem {
       bar.fill.scale.x = Math.max(.001, ratio);
       bar.fill.position.x = -(1 - ratio) * 1.015;
 
-      if (data.hp < bar.lastHp) {
-        bar.root.scale.setScalar(1.08);
-      } else {
-        bar.root.scale.lerp(new THREE.Vector3(1, 1, 1), .18);
-      }
+      if (data.hp < bar.lastHp) bar.root.scale.setScalar(1.08);
+      else bar.root.scale.lerp(new THREE.Vector3(1, 1, 1), .18);
       bar.lastHp = data.hp;
     }
   }
