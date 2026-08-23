@@ -30,7 +30,7 @@
       <section id="startScreen" class="start-screen glass">
         <div class="eyebrow">SKIRMISH RUNTIME</div>
         <h2>Choose your faction</h2>
-        <p>Age-of-Empires-like progression without turning every minute into villager babysitting. Lobby/session data is preserved for the expanding multiplayer adapter; the current battlefield remains the stable flat skirmish runtime.</p>
+        <p>The flat runtime now reads the four-seat lobby. Extra Faction-AI seats can enter the battlefield from the other corners; Connected-AI seats have a normal player-command bridge. Multi-human network/input plumbing remains a later adapter.</p>
         <div id="factionCards" class="faction-cards"></div>
       </section>
       <aside id="leftHud" class="left-hud glass hidden">
@@ -52,6 +52,6 @@
     </main>
   </div>
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}</script>
-  <script type="module">import "./src/battlePatch.js"; import "./src/game.js";</script>
+  <script type="module">import "./src/battlePatch.js"; import "./src/multiSeatPatch.js"; import "./src/game.js";</script>
 </body>
 </html>
