@@ -32,10 +32,23 @@ FactionPowerSystem.prototype.renderUi = function factionPowerHudRender(force = f
   const row = ensureEnemyPowerRow();
   if (!row) return result;
   const value = row.querySelector("strong");
+  const playerFaction = this.factionFor("player");
   const enemyFaction = this.factionFor("enemy");
   if (!enemyFaction) {
     value.textContent = "—";
     return result;
+  }
+
+  const mirrored = Boolean(playerFaction?.id && playerFaction.id === enemyFaction.id);
+  const powerButtons = document.getElementById("factionPowerButtons");
+  if (mirrored && powerButtons) {
+    const ecoButton = powerButtons.querySelector('button[data-power-kind="eco"]');
+    if (ecoButton) {
+      ecoButton.disabled = true;
+      ecoButton.title = "Mirrored factions share one economy definition in the current flat runtime; Attack and Defense remain available.";
+      const small = ecoButton.querySelector("small");
+      if (small && !small.textContent.includes("Mirrored matchup")) small.textContent += " • Mirrored matchup: unavailable";
+    }
   }
 
   const state = this.stateFor("enemy");
