@@ -11,6 +11,7 @@ function armorMultiplier(target) {
 }
 
 function applyFormationShape(group, role) {
+  if (role === "legacy") return;
   const members = group.children.filter(child => child?.isGroup);
   if (role === "ranged") {
     members.forEach((member, index) => {
@@ -60,7 +61,7 @@ GlobeRTSWorld.prototype.spawnSquad = function globeRoleSquad(unitDef, faction, g
   const profile = resolvedCombatProfile(unitDef);
   squad.userData.combatRole = profile.role;
   squad.userData.combatArmor = profile.armor;
-  squad.userData.attackInterval = profile.attackInterval;
+  squad.userData.attackInterval = profile.role === "legacy" ? .9 : profile.attackInterval;
   applyFormationShape(squad, profile.role);
   return squad;
 };
@@ -90,11 +91,12 @@ GlobeRTSWorld.prototype.updateCombat = function globeRoleCombat(entity, dt) {
   if (contact.distance <= range + .55) {
     data.targetNormal = null;
     if (data.cooldown > 0) return;
+    const variance = data.combatRole === "legacy" ? (.68 + Math.random() * .22) : (.76 + Math.random() * .16);
     const hit = Math.max(1,
       Number(data.damage || 0) *
       combatMultiplier(entity, contact.entity) *
       armorMultiplier(contact.entity) *
-      (.76 + Math.random() * .16)
+      variance
     );
     contact.entity.userData.hp -= hit;
     data.cooldown = Math.max(.35, Number(data.attackInterval || .9));
