@@ -28,15 +28,13 @@
       </section>
 
       <aside class="detail glass">
-        <div id="emptyDetail" class="empty-detail"><div class="big-icon">◇</div><h2>Select an Atlas entry</h2><p>Units, structures, terrain, modes and faction lore all use the same reader.</p></div>
+        <div id="emptyDetail" class="empty-detail"><div class="big-icon">◇</div><h2>Select an Atlas entry</h2><p>Units, structures, terrain, upgrades, modes and faction lore all use the same reader.</p></div>
         <article id="detailBody" class="detail-body hidden"></article>
       </aside>
     </main>
   </div>
   <script type="module">
-    import { registerAtlasEntries } from "./src/atlasRegistry.js";
-    import { DEFEND_ATLAS_ENTRIES } from "./src/defendConfig.js";
-    registerAtlasEntries(DEFEND_ATLAS_ENTRIES.map(entry => ({ ...entry, source: "builtin-defend-workshop" })));
+    await import("./src/atlasExtensions.js");
     await import("./src/atlas.js");
   </script>
 </body>
