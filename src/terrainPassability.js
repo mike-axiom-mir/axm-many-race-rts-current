@@ -74,8 +74,8 @@ export function movementPassageAt(map, x, z) {
 
 export function movementSurfaceAt(map, x, z) {
   const paints = map?.surfacePaint || [];
-  // Later surfaces render over earlier surfaces, so movement follows the same
-  // authoring order when multiple painted regions overlap.
+  // Overlap is deterministic for movement: the last authored matching surface
+  // wins. This contract does not assume transparent draw sorting is identical.
   for (let index = paints.length - 1; index >= 0; index--) {
     const paint = paints[index];
     if (paint?.enabled === false || !paintContains(paint, x, z, 0)) continue;
