@@ -38,7 +38,7 @@ RTSWorld.prototype.makeTerrain = function mapVisualTerrain() {
   const result = originalMakeTerrain.call(this);
   applyMapEnvironment(this.scene, DEFAULT_MAP);
   if (this.ground?.material?.color && DEFAULT_MAP.environment?.terrainTint) this.ground.material.color.set(DEFAULT_MAP.environment.terrainTint);
-  if (this.ground?.geometry) applyTerrainStampsToGeometry(this.ground.geometry, DEFAULT_MAP, { additive: true });
+  if (this.ground?.geometry) applyTerrainStampsToGeometry(this.ground.geometry, DEFAULT_MAP, { additive: false });
   hideLegacyRoads(this);
   if (DEFAULT_MAP.environment?.legacyCenterpiece === false && this.controlPoint) this.controlPoint.visible = false;
 
