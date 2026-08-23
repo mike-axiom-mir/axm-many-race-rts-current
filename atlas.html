@@ -33,6 +33,11 @@
       </aside>
     </main>
   </div>
-  <script type="module" src="src/atlas.js"></script>
+  <script type="module">
+    import { registerAtlasEntries } from "./src/atlasRegistry.js";
+    import { DEFEND_ATLAS_ENTRIES } from "./src/defendConfig.js";
+    registerAtlasEntries(DEFEND_ATLAS_ENTRIES.map(entry => ({ ...entry, source: "builtin-defend-workshop" })));
+    await import("./src/atlas.js");
+  </script>
 </body>
 </html>
