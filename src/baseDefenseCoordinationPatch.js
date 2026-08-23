@@ -163,6 +163,10 @@ DefenseSystem.prototype.fire = function baseDefenseFire(source, target) {
   source.userData.damage = savedDamage;
   source.userData.projectileSpeed = savedSpeed;
   source.userData.projectileLifetime = savedLifetime;
+  // Phase 25's tower-fire visual hook records recoil state for any firing source,
+  // while its animator intentionally advances only defense buildings. Capital
+  // garrison shots keep the muzzle flash but clear that tower-only recoil marker.
+  delete source.userData.__axmTowerAttackVisual;
   return result;
 };
 
