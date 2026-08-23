@@ -15,7 +15,7 @@ function box(color,x,y,z){return new THREE.Mesh(new THREE.BoxGeometry(x,y,z),mat
 
 function addShield(soldier,color,leaf=false){
   const shield=leaf?new THREE.Mesh(new THREE.SphereGeometry(.32,7,5),mat(color)):plate(color,.31);
-  shield.scale.set(leaf?.68:1,leaf?1.15:1,leaf?.28:1); add(soldier,shield,-.34,.86,.02);
+  shield.scale.set(leaf ? .68 : 1, leaf ? 1.15 : 1, leaf ? .28 : 1); add(soldier,shield,-.34,.86,.02);
 }
 function addSpear(soldier,color=0xb7a47f,length=1.75){const p=pole(color,length,.028);p.rotation.z=-.18;add(soldier,p,.34,.96,0);}
 function addBow(soldier,color=0x825c39){
