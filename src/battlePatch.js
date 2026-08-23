@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { RTSWorld } from "./world.js";
 import { DefenseSystem } from "./defenseSystem.js";
+import "./minimapPatch.js";
 
 const originalTick = RTSWorld.prototype.tick;
 const originalResetDynamic = RTSWorld.prototype.resetDynamic;

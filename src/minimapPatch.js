@@ -1,0 +1,139 @@
+import { RTSWorld } from "./world.js";
+import { DEFAULT_MAP } from "./maps.js";
+
+const originalTick = RTSWorld.prototype.tick;
+const WORLD = { minX: -50, maxX: 50, minZ: -36, maxZ: 36 };
+
+function toMapX(x, width) {
+  return ((x - WORLD.minX) / (WORLD.maxX - WORLD.minX)) * width;
+}
+
+function toMapY(z, height) {
+  return ((z - WORLD.minZ) / (WORLD.maxZ - WORLD.minZ)) * height;
+}
+
+function injectStyle() {
+  if (document.getElementById("axm-minimap-style")) return;
+  const style = document.createElement("style");
+  style.id = "axm-minimap-style";
+  style.textContent = `
+    .axm-minimap-wrap{position:absolute;z-index:7;left:50%;bottom:18px;transform:translateX(-50%);width:220px;height:150px;padding:6px;border:1px solid rgba(150,184,214,.28);border-radius:13px;background:rgba(6,13,20,.86);box-shadow:0 14px 34px rgba(0,0,0,.32);backdrop-filter:blur(10px)}
+    .axm-minimap-title{position:absolute;left:10px;top:8px;z-index:2;font:800 8px/1 system-ui,sans-serif;letter-spacing:.14em;color:#c7d7e5;pointer-events:none;text-transform:uppercase}
+    .axm-minimap{width:100%;height:100%;display:block;border-radius:8px;cursor:crosshair}
+    @media(max-width:900px){.axm-minimap-wrap{left:auto;right:8px;top:72px;bottom:auto;transform:none;width:150px;height:104px;padding:4px}.axm-minimap-title{font-size:7px;left:7px;top:6px}}
+  `;
+  document.head.appendChild(style);
+}
+
+function ensureMinimap(world) {
+  if (world.__axmMinimap) return world.__axmMinimap;
+  injectStyle();
+
+  const wrap = document.createElement("div");
+  wrap.className = "axm-minimap-wrap";
+  wrap.innerHTML = `<div class="axm-minimap-title">${DEFAULT_MAP.name}</div>`;
+  const canvas = document.createElement("canvas");
+  canvas.className = "axm-minimap";
+  canvas.width = 440;
+  canvas.height = 300;
+  wrap.appendChild(canvas);
+  document.querySelector("main")?.appendChild(wrap);
+
+  canvas.addEventListener("pointerdown", event => {
+    const rect = canvas.getBoundingClientRect();
+    const px = (event.clientX - rect.left) / rect.width;
+    const py = (event.clientY - rect.top) / rect.height;
+    const x = WORLD.minX + px * (WORLD.maxX - WORLD.minX);
+    const z = WORLD.minZ + py * (WORLD.maxZ - WORLD.minZ);
+    world.cameraTarget.set(x, 0, z);
+    world.clampCamera();
+  });
+
+  world.__axmMinimap = { wrap, canvas, ctx: canvas.getContext("2d"), lastDraw: 0 };
+  return world.__axmMinimap;
+}
+
+function drawTerrain(ctx, width, height) {
+  ctx.fillStyle = "#496644";
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.strokeStyle = "rgba(214,197,133,.35)";
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.moveTo(width * .12, height * .70);
+  ctx.lineTo(width * .88, height * .30);
+  ctx.stroke();
+
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(width * .44, height * .12);
+  ctx.lineTo(width * .56, height * .88);
+  ctx.stroke();
+
+  for (const site of DEFAULT_MAP.strategicSites) {
+    const x = toMapX(site.position[0], width);
+    const y = toMapY(site.position[2], height);
+    ctx.beginPath();
+    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(230,207,125,.35)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,228,150,.75)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+}
+
+function drawEntity(ctx, entity, width, height) {
+  const data = entity.userData;
+  if (!entity.parent || data.hp <= 0 || !data.owner) return;
+  const x = toMapX(entity.position.x, width);
+  const y = toMapY(entity.position.z, height);
+  const player = data.owner === "player";
+  ctx.fillStyle = player ? "#78ddff" : "#ff7b83";
+
+  if (data.type === "capital") {
+    ctx.fillRect(x - 6, y - 6, 12, 12);
+    ctx.strokeStyle = "rgba(255,255,255,.75)";
+    ctx.strokeRect(x - 7, y - 7, 14, 14);
+  } else if (data.type === "building") {
+    ctx.fillRect(x - 4, y - 4, 8, 8);
+  } else if (data.type === "founder") {
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#fff6c9";
+    ctx.stroke();
+  } else if (data.type === "squad") {
+    ctx.beginPath();
+    ctx.arc(x, y, 3.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawCamera(ctx, world, width, height) {
+  const x = toMapX(world.cameraTarget.x, width);
+  const y = toMapY(world.cameraTarget.z, height);
+  ctx.strokeStyle = "rgba(255,255,255,.92)";
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(x - 13, y - 9, 26, 18);
+}
+
+function drawMinimap(world, time) {
+  const mini = ensureMinimap(world);
+  if (time - mini.lastDraw < .08) return;
+  mini.lastDraw = time;
+
+  const { ctx, canvas } = mini;
+  const width = canvas.width;
+  const height = canvas.height;
+  ctx.clearRect(0, 0, width, height);
+  drawTerrain(ctx, width, height);
+  for (const entity of world.entities) drawEntity(ctx, entity, width, height);
+  drawCamera(ctx, world, width, height);
+}
+
+RTSWorld.prototype.tick = function minimapTick(time, dt) {
+  const result = originalTick.call(this, time, dt);
+  drawMinimap(this, time);
+  return result;
+};
