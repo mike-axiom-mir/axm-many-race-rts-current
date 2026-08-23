@@ -46,8 +46,9 @@ MapDirector.prototype.update = function multiSeatMapUpdate(dt, time = 0) {
       presentOwners.sort((a, b) => (presence.get(b) || 0) - (presence.get(a) || 0));
       const capturingOwner = presentOwners[0];
       const force = Math.min(2, presence.get(capturingOwner) || 1);
+      const friendlyHolder = site.owner !== "neutral" && sameTeam(this.world, site.owner, capturingOwner);
 
-      if (site.owner === capturingOwner) {
+      if (site.owner === capturingOwner || friendlyHolder) {
         site.progress = 100;
         site.captureOwner = null;
       } else {
