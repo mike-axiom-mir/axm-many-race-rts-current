@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#050b12" />
+  <title>AXM Many-Race RTS — Battle Maps</title>
+  <link rel="stylesheet" href="battle.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="head">
+      <div class="identity"><a href="./index.html" class="mark" style="text-decoration:none">AXM</a><div><div class="tag">PREMADE BATTLE CHALLENGES</div><h1>Battle Maps</h1><p>Campaign-like structure without forcing a story campaign</p></div></div>
+      <div class="head-actions"><a href="./battle-editor.html">Battle Map Editor</a><a href="./index.html">Main menu</a></div>
+    </header>
+
+    <main class="content">
+      <section class="panel glass">
+        <div class="tag">CHALLENGE LIBRARY</div>
+        <h2 style="margin:5px 0 14px">Choose a battle situation</h2>
+        <div id="battleCards" class="cards"></div>
+      </section>
+      <aside class="panel glass detail">
+        <div class="tag">SELECTED BATTLE MAP</div>
+        <h2 id="detailName">Choose a challenge</h2>
+        <div id="detailSubtitle" class="subtitle"></div>
+        <p id="detailDescription" class="muted" style="margin-top:10px;line-height:1.55"></p>
+        <div class="section">Objectives</div>
+        <div id="detailObjectives" class="objectives"></div>
+        <div class="section">Battle setup</div>
+        <div id="detailSetup" class="objectives"></div>
+        <a id="playBtn" class="wide" href="./skirmish.html">Open runtime</a>
+        <a class="wide secondary" href="./battle-editor.html">Open Battle Map Editor</a>
+      </aside>
+    </main>
+  </div>
+  <script type="module" src="src/battlemapsPage.js"></script>
+</body>
+</html>
