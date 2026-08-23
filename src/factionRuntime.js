@@ -8,6 +8,7 @@ function ensureBaseStats(entity) {
   data.damage = data.__axmBaseDamage;
   data.speed = data.__axmBaseSpeed;
   data.range = data.__axmBaseRange;
+  data.__axmFactionState = null;
 }
 
 function activeSquads(world, owner) {
