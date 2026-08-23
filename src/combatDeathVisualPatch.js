@@ -233,6 +233,7 @@ function makeUnitDeathProxy(entity) {
   root.name = `death-${entity.userData.id || entity.userData.type}`;
   root.position.copy(entity.position);
   root.rotation.y = entity.rotation.y;
+  root.scale.copy(entity.scale);
   root.visible = entity.visible;
   const color = sampleEntityColor(entity);
   const founder = entity.userData.type === "founder";
