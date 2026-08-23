@@ -1,4 +1,5 @@
 import { SKIRMISH_MAP_PACK } from "./skirmishMapPack.js";
+import { applyMapVisualPresets } from "./mapVisualPresets.js";
 
 export const MAPS = {
   foundersCrossing: {
@@ -49,6 +50,8 @@ export const MAPS = {
   },
   ...SKIRMISH_MAP_PACK
 };
+
+applyMapVisualPresets(MAPS);
 
 export const DEFAULT_MAP = MAPS.foundersCrossing;
 
