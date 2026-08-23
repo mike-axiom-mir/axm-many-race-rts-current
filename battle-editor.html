@@ -11,7 +11,7 @@
   <div class="page">
     <header class="head">
       <div class="identity"><a href="./index.html" class="mark" style="text-decoration:none">AXM</a><div><div class="tag">CHALLENGE AUTHORING</div><h1>Battle Map Editor</h1><p>Stage the fight on top of a finished world map</p></div></div>
-      <div class="head-actions"><button id="newBattleBtn">New</button><button id="importBattleBtn">Import battle</button><button id="exportBattleBtn">Export battle JSON</button><a href="./battlemaps.html">Battle Maps</a></div>
+      <div class="head-actions"><button id="newBattleBtn">New</button><button id="importBattleBtn">Import battle</button><button id="exportBattleBtn">Export battle JSON</button><a href="./battlemaps.html">Battle Maps</a><a href="./atlas.html">Atlas</a></div>
     </header>
 
     <main class="editor">
@@ -74,5 +74,6 @@
     <input id="battleFile" type="file" accept="application/json,.json" hidden>
   </div>
   <script type="module" src="src/battleEditor.js"></script>
+  <script type="module" src="src/atlasContentBridge.js"></script>
 </body>
 </html>
