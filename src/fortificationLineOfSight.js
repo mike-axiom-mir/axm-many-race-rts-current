@@ -12,7 +12,7 @@ function localPoint(fort, point) {
   return { x: dx * c - dz * s, z: dx * s + dz * c };
 }
 
-function segmentHitsRect(a, b, halfWidth, halfDepth) {
+function segmentRectEntry(a, b, halfWidth, halfDepth) {
   const dx = b.x - a.x;
   const dz = b.z - a.z;
   let tMin = 0;
@@ -20,7 +20,7 @@ function segmentHitsRect(a, b, halfWidth, halfDepth) {
 
   for (const [start, delta, half] of [[a.x, dx, halfWidth], [a.z, dz, halfDepth]]) {
     if (Math.abs(delta) < 1e-6) {
-      if (start < -half || start > half) return false;
+      if (start < -half || start > half) return null;
       continue;
     }
     let t1 = (-half - start) / delta;
@@ -28,9 +28,10 @@ function segmentHitsRect(a, b, halfWidth, halfDepth) {
     if (t1 > t2) [t1, t2] = [t2, t1];
     tMin = Math.max(tMin, t1);
     tMax = Math.min(tMax, t2);
-    if (tMin > tMax) return false;
+    if (tMin > tMax) return null;
   }
-  return tMax >= 0 && tMin <= 1;
+  if (tMax < 0 || tMin > 1) return null;
+  return Math.max(0, tMin);
 }
 
 export function fortificationBlocksLineOfSight(fort) {
@@ -44,7 +45,7 @@ export function firstLineOfSightBlocker(world, from, to, options = {}) {
   const end = pointOf(to);
   const ignore = new Set(options.ignore || []);
   let best = null;
-  let bestDistance = Infinity;
+  let bestT = Infinity;
 
   for (const fort of world?.entities || []) {
     if (ignore.has(fort) || !fortificationBlocksLineOfSight(fort)) continue;
@@ -53,13 +54,10 @@ export function firstLineOfSightBlocker(world, from, to, options = {}) {
     const b = localPoint(fort, end);
     const halfWidth = Math.max(.3, Number(cfg.width || 5.4) / 2);
     const halfDepth = Math.max(.2, Number(cfg.depth || .85) / 2);
-    if (!segmentHitsRect(a, b, halfWidth, halfDepth)) continue;
-
-    const distance = Math.hypot(fort.position.x - start.x, fort.position.z - start.z);
-    if (distance < bestDistance) {
-      best = fort;
-      bestDistance = distance;
-    }
+    const entryT = segmentRectEntry(a, b, halfWidth, halfDepth);
+    if (entryT == null || entryT >= bestT) continue;
+    best = fort;
+    bestT = entryT;
   }
   return best;
 }
