@@ -1,5 +1,6 @@
 import { FACTIONS } from "./factions.js";
 import { factionNpcFor } from "./factionNpcs.js";
+import { resolvedCombatProfile, roleCounterText } from "./combatRules.js";
 
 const list = document.getElementById("factionList");
 const hero = document.getElementById("factionHero");
@@ -9,6 +10,10 @@ let selected = ids[0];
 
 function colorHex(value) {
   return `#${Number(value || 0).toString(16).padStart(6, "0")}`;
+}
+
+function pct(value = 0) {
+  return `${Math.round(Number(value || 0) * 100)}%`;
 }
 
 function renderList() {
@@ -21,6 +26,34 @@ function renderList() {
     button.addEventListener("click", () => { selected = id; render(); });
     list.appendChild(button);
   }
+}
+
+function unitCard(faction, unit) {
+  const profile = resolvedCombatProfile(unit);
+  const squadSize = unit.squadSize || faction.military?.squadSize || 5;
+  const role = roleCounterText(profile.role);
+  const unlockAge = Number.isFinite(unit.unlockAge) ? Number(unit.unlockAge) : Math.max(0, faction.units.indexOf(unit));
+  return `<div class="unit">
+    <b>${escapeHtml(unit.name)}</b>
+    ${escapeHtml(unit.description || "")}<br>
+    <span class="muted">${escapeHtml(role)} • squad ${squadSize}</span><br>
+    <span class="muted">HP/member ${unit.hp} • DMG/member ${unit.damage} • RNG ${unit.range} • SPD ${unit.speed}</span><br>
+    <span class="muted">Armor ${pct(profile.armor)} • attack ${profile.attackInterval.toFixed(2)}s • unlock Age ${unlockAge + 1}</span>
+  </div>`;
+}
+
+function buildingCard(faction, building) {
+  const scaledHp = building.hp ? Math.round(building.hp * (faction.building?.health || 1)) : null;
+  const tower = building.role === "defense";
+  const details = [
+    building.role,
+    scaledHp ? `HP ${scaledHp}` : null,
+    building.armor != null ? `Armor ${pct(building.armor)}` : null,
+    tower && building.defense ? `DMG ${building.defense}` : null,
+    tower && building.defenseRange ? `RNG ${building.defenseRange}` : null,
+    tower && building.fireInterval ? `${Number(building.fireInterval).toFixed(2)}s fire` : null
+  ].filter(Boolean).join(" • ");
+  return `<div class="unit"><b>${escapeHtml(building.name)}</b>${escapeHtml(building.description || "")}<br><span class="muted">${escapeHtml(details)}</span></div>`;
 }
 
 function renderFaction() {
@@ -37,13 +70,14 @@ function renderFaction() {
 
   const economy = Object.entries(f.economy).map(([k,v]) => `<div class="stat"><span>${escapeHtml(k)}</span><b>${Math.round(v*100)}%</b></div>`).join("");
   const military = Object.entries(f.military).map(([k,v]) => `<div class="stat"><span>${escapeHtml(k)}</span><b>${typeof v === "number" ? v : escapeHtml(String(v))}</b></div>`).join("");
-  const units = f.units.map(unit => `<div class="unit"><b>${escapeHtml(unit.name)}</b>${escapeHtml(unit.description || "")}<br><span class="muted">HP ${unit.hp} • DMG ${unit.damage} • SPD ${unit.speed}</span></div>`).join("");
-  const buildings = f.buildings.map(building => `<div class="unit"><b>${escapeHtml(building.name)}</b>${escapeHtml(building.description || "")}<br><span class="muted">${escapeHtml(building.role)}</span></div>`).join("");
+  const units = f.units.map(unit => unitCard(f, unit)).join("");
+  const buildings = f.buildings.map(building => buildingCard(f, building)).join("");
 
   details.innerHTML = `
     <article class="card"><h3>Faction rule</h3><p>${escapeHtml(f.special)}</p></article>
     <article class="card"><h3>Economy profile</h3>${economy}</article>
     <article class="card"><h3>Military profile</h3>${military}</article>
+    <article class="card"><h3>Combat language</h3><p><b>Line</b> checks Mobile • <b>Mobile</b> closes on Ranged • <b>Ranged</b> pressures Line • <b>Siege</b> breaks Structures. These are bonuses, not hard immunity rules.</p></article>
     <article class="card"><h3>Units</h3><div class="unit-grid">${units}</div></article>
     <article class="card"><h3>Buildings</h3><div class="unit-grid">${buildings}</div></article>
     <article class="card npc"><h3>Native faction NPC — ${escapeHtml(npc?.name || "Unassigned")}</h3>

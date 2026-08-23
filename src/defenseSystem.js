@@ -14,6 +14,11 @@ function ownerProjectileColor(owner) {
   return 0xdde7ed;
 }
 
+function armorMultiplier(target) {
+  const armor = Math.max(0, Math.min(.65, Number(target?.userData?.combatArmor || target?.userData?.armor || 0)));
+  return 1 - armor;
+}
+
 export class DefenseSystem {
   constructor(world) {
     this.world = world;
@@ -59,7 +64,7 @@ export class DefenseSystem {
       owner,
       damage: Math.max(7, building.userData.damage || 12),
       speed: Math.max(4, Number(building.userData.projectileSpeed) || 13),
-      life: Math.max(1, Number(building.userData.projectileLife) || 2.5)
+      life: Math.max(1, Number(building.userData.projectileLifetime ?? building.userData.projectileLife) || 2.5)
     });
   }
 
@@ -100,7 +105,7 @@ export class DefenseSystem {
       const delta = aim.sub(projectile.mesh.position);
       const distance = delta.length();
       if (distance <= .55) {
-        target.userData.hp -= projectile.damage;
+        target.userData.hp -= Math.max(1, projectile.damage * armorMultiplier(target));
         if (target.userData.hp <= 0) this.world.removeEntity(target);
         this.group.remove(projectile.mesh);
         projectile.mesh.geometry.dispose();

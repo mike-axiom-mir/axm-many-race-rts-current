@@ -18,13 +18,14 @@ export const WILDCARD_FACTION = {
     starting: { food: 305, wood: 305, stone: 170, gold: 205, workforce: 20 },
     special: "Resonance Cycle: every 14 seconds the entire Chorus shifts between Drift, Focus and Mend. The cycle is deterministic and visible, rewarding timing instead of randomness.",
     buildings: [
-      { id: "prism-reservoir", name: "Resonance Reservoir", role: "economy", cost: { wood: 115, stone: 30 }, income: { gold: 0.42, wood: 0.22 }, description: "Stores and redistributes resonant material" },
-      { id: "prism-loom", name: "Chorus Loom", role: "military", cost: { wood: 145, gold: 52 }, unlocks: "facet-guard", description: "Forms Prismkin battle cohorts" },
-      { id: "prism-spire", name: "Refraction Spire", role: "defense", cost: { wood: 92, stone: 92 }, defense: 19, description: "Balanced defensive prism tower" }
+      { id: "prism-reservoir", name: "Resonance Reservoir", role: "economy", cost: { wood: 115, stone: 30 }, hp: 500, armor: 0.06, income: { gold: 0.42, wood: 0.22 }, description: "Balanced resonant economy node that keeps Gold and Wood flowing." },
+      { id: "prism-loom", name: "Chorus Loom", role: "military", cost: { wood: 145, gold: 52 }, hp: 505, armor: 0.06, unlocks: "facet-guard", description: "Forms Chorus battle cohorts and anchors the faction's small flexible roster." },
+      { id: "prism-spire", name: "Refraction Spire", role: "defense", cost: { wood: 92, stone: 92 }, hp: 650, armor: 0.09, defense: 19, defenseRange: 13.2, fireInterval: 0.92, projectileSpeed: 16, description: "Balanced prism tower whose stable stats contrast with the army's shifting rhythm." }
     ],
     units: [
-      { id: "facet-guard", name: "Facet Guard", cost: { food: 60, gold: 35 }, hp: 96, damage: 14, speed: 3.35, range: 1.35, description: "Adaptive line formation tuned to the current resonance phase" },
-      { id: "refractor", name: "Refractor Flight", cost: { food: 70, wood: 30, gold: 50 }, hp: 76, damage: 17, speed: 4.25, range: 1.75, description: "Fast ranged formation that becomes dangerous during Focus" }
+      { id: "facet-guard", name: "Facet Guard", unlockAge: 0, requiresBuilding: "prism-loom", cost: { food: 60, gold: 35 }, hp: 96, damage: 14, speed: 3.35, range: 1.35, combat: { role: "line", armor: 0.08, attackInterval: 0.88 }, description: "Line • adaptive frontline formation whose job changes subtly with the current resonance phase." },
+      { id: "refractor", name: "Refractor Flight", unlockAge: 1, requiresBuilding: "prism-loom", squadSize: 4, cost: { food: 70, wood: 30, gold: 50 }, hp: 80, damage: 17, speed: 4.25, range: 2.05, combat: { role: "ranged", armor: 0.02, attackInterval: 1.0 }, description: "Ranged • mobile-feeling pressure formation that spikes during Focus and repositions during Drift." },
+      { id: "shard-runners", name: "Shard Runners", unlockAge: 2, requiresBuilding: "prism-loom", squadSize: 4, cost: { food: 74, wood: 26, gold: 54 }, hp: 74, damage: 18, speed: 4.65, range: 1.3, combat: { role: "mobile", armor: 0.03, attackInterval: 0.74 }, description: "Mobile • late-game flanking formation that turns Drift windows into sudden positional swings." }
     ]
   }
 };
