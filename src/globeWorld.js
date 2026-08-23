@@ -1,0 +1,346 @@
+import * as THREE from "three";
+import { geoToCartesian, cartesianToGeo, normalizeMapDefinition } from "./mapSchema.js";
+import { decorationById, skinById } from "./worldCatalog.js";
+
+const UP = new THREE.Vector3(0, 1, 0);
+
+function mat(color, opts = {}) {
+  return new THREE.MeshStandardMaterial({ color, roughness: .82, metalness: .04, flatShading: true, ...opts });
+}
+
+function ownerColor(owner) {
+  if (owner === "player") return 0x68d6ff;
+  if (owner === "enemy") return 0xe56c76;
+  return 0xd4c57d;
+}
+
+function shadow(mesh) {
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+export class GlobeRTSWorld {
+  constructor(container, hooks = {}) {
+    this.container = container;
+    this.hooks = hooks;
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x050b12);
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.75));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    container.appendChild(this.renderer.domElement);
+
+    this.camera = new THREE.PerspectiveCamera(42, 1, .1, 500);
+    this.camera.position.set(0, 6, 68);
+    this.root = new THREE.Group();
+    this.staticGroup = new THREE.Group();
+    this.dynamic = new THREE.Group();
+    this.siteGroup = new THREE.Group();
+    this.root.add(this.staticGroup, this.dynamic, this.siteGroup);
+    this.scene.add(this.root);
+
+    this.entities = [];
+    this.sites = [];
+    this.radius = 24;
+    this.map = null;
+    this.surface = null;
+    this.raycaster = new THREE.Raycaster();
+    this.pointer = new THREE.Vector2();
+    this.pointerDown = null;
+    this.dragging = false;
+    this.rotationTarget = { x: -.12, y: .35 };
+
+    this.makeLights();
+    this.bindInput();
+    this.resize();
+    window.addEventListener("resize", () => this.resize());
+  }
+
+  makeLights() {
+    this.scene.add(new THREE.HemisphereLight(0xe7f5ff, 0x273323, 2.0));
+    const sun = new THREE.DirectionalLight(0xffefd2, 3.5);
+    sun.position.set(-40, 36, 45);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -45;
+    sun.shadow.camera.right = 45;
+    sun.shadow.camera.top = 45;
+    sun.shadow.camera.bottom = -45;
+    this.scene.add(sun);
+    const rim = new THREE.DirectionalLight(0x7fc9ff, 1.0);
+    rim.position.set(35, -12, -30);
+    this.scene.add(rim);
+  }
+
+  clearGroup(group) {
+    for (const child of [...group.children]) {
+      child.traverse(obj => {
+        obj.geometry?.dispose?.();
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose?.());
+        else obj.material?.dispose?.();
+      });
+      group.remove(child);
+    }
+  }
+
+  loadMap(input) {
+    const map = normalizeMapDefinition(input);
+    if (map.projection !== "globe") throw new Error("GlobeRTSWorld requires a globe map.");
+    this.map = map;
+    this.radius = Number(map.environment?.radius) || 24;
+    this.entities.length = 0;
+    this.sites.length = 0;
+    this.clearGroup(this.staticGroup);
+    this.clearGroup(this.dynamic);
+    this.clearGroup(this.siteGroup);
+    this.buildPlanet();
+    this.buildSurfacePaint();
+    this.buildDecorations();
+    this.buildSites();
+    this.camera.position.z = Math.max(40, this.radius * 2.75);
+    this.rotationTarget = { x: -.12, y: .35 };
+    this.root.rotation.set(this.rotationTarget.x, this.rotationTarget.y, 0);
+  }
+
+  buildPlanet() {
+    const env = this.map.environment || {};
+    this.surface = shadow(new THREE.Mesh(new THREE.IcosahedronGeometry(this.radius, 5), mat(env.terrainTint || 0x73945f)));
+    this.surface.name = "globe-surface";
+    this.staticGroup.add(this.surface);
+
+    const ocean = new THREE.Mesh(
+      new THREE.SphereGeometry(this.radius * .997, 64, 32),
+      new THREE.MeshStandardMaterial({ color: env.oceanTint || 0x315f79, transparent: true, opacity: .48, roughness: .36, metalness: .04 })
+    );
+    this.staticGroup.add(ocean);
+
+    if (env.atmosphere !== false) {
+      const atmosphere = new THREE.Mesh(
+        new THREE.SphereGeometry(this.radius * 1.045, 56, 28),
+        new THREE.MeshBasicMaterial({ color: 0x79c9ff, transparent: true, opacity: .075, side: THREE.BackSide, depthWrite: false })
+      );
+      this.staticGroup.add(atmosphere);
+    }
+  }
+
+  buildSurfacePaint() {
+    for (const paint of this.map.surfacePaint || []) {
+      if (paint.enabled === false) continue;
+      const skin = skinById(paint.skin);
+      const color = paint.tint && paint.tint !== "#ffffff" ? paint.tint : skin.color;
+      const visualRadius = Math.min(7, Math.max(.8, Number(paint.radius || 5) * .55));
+      const disk = new THREE.Mesh(
+        new THREE.CircleGeometry(visualRadius, 40),
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: Math.min(.72, Number(paint.opacity) || .55), side: THREE.DoubleSide, depthWrite: false })
+      );
+      disk.rotation.x = -Math.PI / 2;
+      const group = new THREE.Group();
+      group.add(disk);
+      this.placeGroup(group, paint.geo, .035);
+      group.userData = { mapObject: paint, type: "surface" };
+      this.staticGroup.add(group);
+    }
+  }
+
+  buildDecorations() {
+    for (const object of this.map.decorations || []) {
+      if (object.enabled === false) continue;
+      const group = this.makeDecoration(object);
+      this.placeGroup(group, object.geo, .08);
+      group.userData = { ...group.userData, mapObject: object, type: "decoration" };
+      this.staticGroup.add(group);
+    }
+  }
+
+  makeDecoration(object) {
+    const def = decorationById(object.asset);
+    const group = new THREE.Group();
+    const color = object.tint || def.tint;
+    if (def.shape === "tree" || def.shape === "pine") {
+      const trunk = shadow(new THREE.Mesh(new THREE.CylinderGeometry(.14,.24,1.2,6), mat(0x674b32))); trunk.position.y=.6;
+      const crown = shadow(new THREE.Mesh(new THREE.ConeGeometry(.72,1.55,7), mat(color))); crown.position.y=1.55;
+      group.add(trunk,crown);
+    } else if (def.shape === "rock") {
+      const rock = shadow(new THREE.Mesh(new THREE.DodecahedronGeometry(.6,0), mat(color))); rock.position.y=.42; group.add(rock);
+    } else if (def.shape === "crystal") {
+      const crystal = shadow(new THREE.Mesh(new THREE.OctahedronGeometry(.62), mat(color,{roughness:.4}))); crystal.position.y=.7; crystal.userData.spin=.55; group.add(crystal);
+    } else if (def.shape === "pillar" || def.shape === "obelisk") {
+      const p = shadow(new THREE.Mesh(new THREE.CylinderGeometry(.28,.45,2.15,6), mat(color))); p.position.y=1.08; group.add(p);
+    } else if (def.shape === "campfire") {
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(.32,.65,7), new THREE.MeshBasicMaterial({color})); flame.position.y=.36; flame.userData.pulse=true; group.add(flame);
+    } else {
+      const box = shadow(new THREE.Mesh(new THREE.BoxGeometry(1.1,.8,.85), mat(color))); box.position.y=.4; group.add(box);
+    }
+    const scale = Math.max(.1, Number(object.scale) || 1);
+    group.scale.setScalar(scale);
+    group.rotation.y = THREE.MathUtils.degToRad(Number(object.rotation) || 0);
+    return group;
+  }
+
+  buildSites() {
+    for (const def of this.map.strategicSites || []) {
+      if (def.enabled === false) continue;
+      const group = new THREE.Group();
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(Math.min(2.1, Math.max(.85, Number(def.radius || 5) * .24)), .08, 6, 36), new THREE.MeshBasicMaterial({ color: ownerColor(def.owner), transparent: true, opacity: .75, depthWrite: false }));
+      ring.rotation.x = Math.PI / 2;
+      const pillar = shadow(new THREE.Mesh(new THREE.CylinderGeometry(.22,.38,1.6,7), mat(0x8a8068))); pillar.position.y=.82;
+      const crown = shadow(new THREE.Mesh(new THREE.OctahedronGeometry(.42), mat(0xd8c47c,{roughness:.4}))); crown.position.y=1.88; crown.userData.spin=.7;
+      group.add(ring,pillar,crown);
+      this.placeGroup(group, def.geo, .06);
+      this.siteGroup.add(group);
+      this.sites.push({ def, group, ring, owner: def.owner || "neutral", progress: 0, contested: false, normal: this.normalFromGeo(def.geo) });
+    }
+  }
+
+  normalFromGeo(geo) {
+    return geoToCartesian(geo, 1).normalize();
+  }
+
+  geoFromNormal(normal) {
+    return cartesianToGeo(normal.clone().multiplyScalar(this.radius), this.radius);
+  }
+
+  placeGroup(group, geo, offset = .1) {
+    const normal = this.normalFromGeo(geo);
+    group.position.copy(normal).multiplyScalar(this.radius + offset);
+    group.quaternion.setFromUnitVectors(UP, normal);
+    return normal;
+  }
+
+  makeSoldier(color, accent, founder = false) {
+    const unit = new THREE.Group();
+    const body = shadow(new THREE.Mesh(new THREE.CylinderGeometry(founder?.28:.20, founder?.34:.27, founder?.95:.72, 7), mat(color))); body.position.y=founder?.7:.54;
+    const head = shadow(new THREE.Mesh(new THREE.SphereGeometry(founder?.25:.19,7,5), mat(0xdfb48d))); head.position.y=founder?1.32:1.02;
+    const hat = shadow(new THREE.Mesh(new THREE.ConeGeometry(founder?.32:.25,founder?.42:.30,7), mat(accent))); hat.position.y=founder?1.65:1.29;
+    const weapon = shadow(new THREE.Mesh(new THREE.BoxGeometry(.06,founder?.95:.68,.06), mat(0x6f5840))); weapon.position.set(.27,founder?.67:.52,0); weapon.rotation.z=-.3; weapon.userData.swing=Math.random()*10;
+    unit.add(body,head,hat,weapon);
+    return unit;
+  }
+
+  spawnCapital(faction, geo, enemy = false) {
+    const group = new THREE.Group();
+    const color = enemy ? 0x7f3d48 : faction.color;
+    const base = shadow(new THREE.Mesh(new THREE.CylinderGeometry(2.0,2.35,.6,8), mat(enemy?0x3f2930:0x32454f))); base.position.y=.3;
+    const keep = shadow(new THREE.Mesh(new THREE.BoxGeometry(2.7,2.3,2.7), mat(color))); keep.position.y=1.65;
+    const roof = shadow(new THREE.Mesh(new THREE.ConeGeometry(2.0,1.35,8), mat(enemy?0x5d3038:faction.accent))); roof.position.y=3.45;
+    group.add(base,keep,roof);
+    const normal = this.placeGroup(group, geo, .12);
+    const data = { type:"capital",owner:enemy?"enemy":"player",hp:1100,maxHp:1100,damage:0,speed:0,range:0,radius:2.3,normal,targetNormal:null,geo:{...geo},label:enemy?"Enemy Capital":`${faction.name} Capital`,faction };
+    group.userData=data;this.dynamic.add(group);this.entities.push(group);return group;
+  }
+
+  spawnFounder(faction, geo, enemy = false) {
+    const group = this.makeSoldier(enemy?0xa84954:faction.color,enemy?0xf0abb2:faction.accent,true);
+    group.scale.setScalar(1.25);
+    const normal=this.placeGroup(group,geo,.12);
+    group.userData={...group.userData,type:"founder",owner:enemy?"enemy":"player",hp:300,maxHp:300,damage:20,speed:3.1,range:1.35,radius:.8,normal,targetNormal:null,cooldown:0,geo:{...geo},label:enemy?"Enemy Founder":faction.founder,faction};
+    this.dynamic.add(group);this.entities.push(group);return group;
+  }
+
+  spawnSquad(unitDef, faction, geo, enemy = false, countOverride = null) {
+    const group=new THREE.Group();const count=countOverride||faction.military?.squadSize||5;
+    for(let i=0;i<count;i++){const s=this.makeSoldier(enemy?0xa84954:faction.color,enemy?0xf0abb2:faction.accent,false);const row=Math.floor(i/3),col=i%3;s.position.set((col-1)*.55,0,(row-.5)*.58);s.userData.phase=i*.6+Math.random();group.add(s);}
+    const normal=this.placeGroup(group,geo,.1);const scale=faction.military||{};const maxHp=Math.round(unitDef.hp*count*(scale.health||1));
+    group.userData={type:"squad",id:unitDef.id,owner:enemy?"enemy":"player",hp:maxHp,maxHp,damage:unitDef.damage*count*(scale.damage||1),speed:unitDef.speed*(scale.speed||1),range:Math.max(1.2,unitDef.range||1.2),radius:1.2,normal,targetNormal:null,cooldown:0,geo:{...geo},label:unitDef.name,faction,unitDef};
+    this.dynamic.add(group);this.entities.push(group);return group;
+  }
+
+  getLiving(owner, type = null) {
+    return this.entities.filter(entity => entity.parent && entity.userData.hp > 0 && entity.userData.owner === owner && (!type || entity.userData.type === type));
+  }
+
+  command(owner, geo) {
+    const target=this.normalFromGeo(geo);
+    for(const entity of this.entities){if(!entity.parent||entity.userData.owner!==owner)continue;if(entity.userData.type!=="squad"&&entity.userData.type!=="founder")continue;entity.userData.targetNormal=target.clone();}
+  }
+
+  commandToNormal(owner, normal) {
+    const geo=this.geoFromNormal(normal.clone().normalize());this.command(owner,geo);
+  }
+
+  surfaceDistance(a,b) {
+    const na=a.userData?.normal||a.normal||a;
+    const nb=b.userData?.normal||b.normal||b;
+    return na.angleTo(nb)*this.radius;
+  }
+
+  nearestEnemy(entity,maxDistance=Infinity) {
+    let best=null,bestD=maxDistance;
+    for(const other of this.entities){if(!other.parent||other===entity||other.userData.hp<=0||other.userData.owner===entity.userData.owner)continue;const d=this.surfaceDistance(entity,other)-(other.userData.radius||0);if(d<bestD){best=other;bestD=d;}}
+    return best?{entity:best,distance:bestD}:null;
+  }
+
+  removeEntity(entity) {
+    const index=this.entities.indexOf(entity);if(index>=0)this.entities.splice(index,1);if(entity.parent)entity.parent.remove(entity);this.hooks.onEntityDestroyed?.(entity);
+  }
+
+  updateEntityPosition(entity) {
+    const data=entity.userData;entity.position.copy(data.normal).multiplyScalar(this.radius+.1);entity.quaternion.setFromUnitVectors(UP,data.normal);
+    data.geo=this.geoFromNormal(data.normal);
+  }
+
+  stepAlongSphere(current,target,maxAngle) {
+    const angle=current.angleTo(target);if(angle<1e-5)return target.clone();
+    let axis=current.clone().cross(target);
+    if(axis.lengthSq()<1e-8){axis=current.clone().cross(Math.abs(current.x)<.8?new THREE.Vector3(1,0,0):new THREE.Vector3(0,0,1));}
+    axis.normalize();return current.clone().applyAxisAngle(axis,Math.min(angle,maxAngle)).normalize();
+  }
+
+  updateMovement(entity,dt) {
+    const data=entity.userData;if((data.type!=="squad"&&data.type!=="founder")||!data.targetNormal)return;
+    const angle=data.normal.angleTo(data.targetNormal);if(angle*this.radius<.35){data.normal.copy(data.targetNormal);data.targetNormal=null;this.updateEntityPosition(entity);return;}
+    const maxAngle=(data.speed||3)*dt/this.radius;data.normal.copy(this.stepAlongSphere(data.normal,data.targetNormal,maxAngle));this.updateEntityPosition(entity);
+  }
+
+  updateCombat(entity,dt) {
+    const data=entity.userData;if(data.type!=="squad"&&data.type!=="founder")return;data.cooldown=Math.max(0,(data.cooldown||0)-dt);
+    const contact=this.nearestEnemy(entity,(data.range||1.2)+2.0);if(!contact)return;
+    if(contact.distance<=(data.range||1.2)+.55){data.targetNormal=null;if(data.cooldown<=0){contact.entity.userData.hp-=data.damage*(.68+Math.random()*.22);data.cooldown=.9;this.flashHit(contact.entity);if(contact.entity.userData.hp<=0)this.removeEntity(contact.entity);}}
+    else if(!data.targetNormal)data.targetNormal=contact.entity.userData.normal.clone();
+  }
+
+  flashHit(entity) {
+    entity.traverse(obj=>{if(!obj.material||obj.material.emissive===undefined)return;const old=obj.material.emissive.getHex();obj.material.emissive.setHex(0x5a1e1e);setTimeout(()=>{if(obj.material?.emissive)obj.material.emissive.setHex(old);},90);});
+  }
+
+  siteUnits(owner,site) {
+    return this.getLiving(owner).filter(entity=>(entity.userData.type==="squad"||entity.userData.type==="founder")&&this.surfaceDistance(entity,site)<=Number(site.def.radius||5)).length;
+  }
+
+  setSiteVisual(site,owner,progress=0,contested=false) {
+    site.owner=owner;site.progress=progress;site.contested=contested;site.ring.material.color.setHex(ownerColor(owner));site.ring.material.opacity=contested?1:.55+Math.min(1,Math.abs(progress)/100)*.3;
+  }
+
+  bindInput() {
+    const canvas=this.renderer.domElement;
+    canvas.addEventListener("pointerdown",e=>{canvas.setPointerCapture?.(e.pointerId);this.pointerDown={id:e.pointerId,x:e.clientX,y:e.clientY,lx:e.clientX,ly:e.clientY};this.dragging=false;});
+    canvas.addEventListener("pointermove",e=>{if(!this.pointerDown)return;const dx=e.clientX-this.pointerDown.lx,dy=e.clientY-this.pointerDown.ly;if(Math.hypot(e.clientX-this.pointerDown.x,e.clientY-this.pointerDown.y)>5)this.dragging=true;if(this.dragging){this.rotationTarget.y+=dx*.007;this.rotationTarget.x=THREE.MathUtils.clamp(this.rotationTarget.x+dy*.006,-1.42,1.42);}this.pointerDown.lx=e.clientX;this.pointerDown.ly=e.clientY;});
+    canvas.addEventListener("pointerup",e=>{if(!this.pointerDown)return;if(!this.dragging){const hit=this.pickSurface(e.clientX,e.clientY);if(hit)this.hooks.onSurfaceClick?.(hit.geo,hit.localNormal);}this.pointerDown=null;this.dragging=false;});
+    canvas.addEventListener("wheel",e=>{e.preventDefault();this.camera.position.z=THREE.MathUtils.clamp(this.camera.position.z*(e.deltaY>0?1.08:.92),this.radius*1.65,this.radius*5.2);},{passive:false});
+  }
+
+  pickSurface(x,y) {
+    if(!this.surface)return null;const rect=this.renderer.domElement.getBoundingClientRect();this.pointer.x=((x-rect.left)/rect.width)*2-1;this.pointer.y=-((y-rect.top)/rect.height)*2+1;this.raycaster.setFromCamera(this.pointer,this.camera);const hit=this.raycaster.intersectObject(this.surface,false)[0];if(!hit)return null;const local=this.root.worldToLocal(hit.point.clone());const normal=local.clone().normalize();return{geo:this.geoFromNormal(normal),localNormal:normal,world:hit.point.clone()};
+  }
+
+  focusGeo(geo) {
+    const normal=this.normalFromGeo(geo);const desired=new THREE.Vector3(0,0,1);const q=new THREE.Quaternion().setFromUnitVectors(normal,desired);const euler=new THREE.Euler().setFromQuaternion(q,"XYZ");this.rotationTarget.x=euler.x;this.rotationTarget.y=euler.y;
+  }
+
+  resize() {
+    const w=Math.max(1,this.container.clientWidth),h=Math.max(1,this.container.clientHeight);this.renderer.setSize(w,h,false);this.camera.aspect=w/h;this.camera.updateProjectionMatrix();
+  }
+
+  animateParts(time,dt) {
+    this.root.traverse(obj=>{if(obj.userData.spin)obj.rotation.y+=obj.userData.spin*dt;if(obj.userData.swing!==undefined)obj.rotation.z=-.3+Math.sin(time*8+obj.userData.swing)*.16;if(obj.userData.pulse)obj.scale.setScalar(.94+Math.sin(time*7)*.08);});
+  }
+
+  tick(time,dt) {
+    this.root.rotation.x+=(this.rotationTarget.x-this.root.rotation.x)*.11;this.root.rotation.y+=(this.rotationTarget.y-this.root.rotation.y)*.11;this.camera.lookAt(0,0,0);this.animateParts(time,dt);
+    for(const entity of [...this.entities]){if(!entity.parent||entity.userData.hp<=0)continue;this.updateMovement(entity,dt);this.updateCombat(entity,dt);}
+    this.renderer.render(this.scene,this.camera);
+  }
+}
