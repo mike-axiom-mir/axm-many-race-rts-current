@@ -25,4 +25,6 @@ import "./multiSeatVictoryPatch.js";
 import "./multiSeatMapPatch.js";
 import "./multiSeatHud.js";
 import "./rainWeatherPatch.js";
+import "./combatWaypointPatch.js";
+import "./combatWaypointInteropPatch.js";
 import "./game.js";
