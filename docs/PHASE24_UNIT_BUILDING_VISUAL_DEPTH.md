@@ -18,9 +18,11 @@ Every supported core faction formation now receives role-aware silhouette detail
 
 ### Ranged
 
-- quiver and arrow bundle;
-- lighter chest bar;
-- clearer rear-support silhouette.
+Ranged units share a lighter rear-support silhouette, but their carried kit respects faction/weapon language instead of forcing one generic bow kit:
+
+- Ironvale/Ashwind — conventional projectile/quiver language that fits bows, bolts and frontier missile units;
+- Greenwake — sling/ammunition pouch and stones rather than arrows;
+- Prismkin — paired crystal emitter fins rather than physical ammunition.
 
 ### Mobile
 
@@ -74,6 +76,8 @@ The role silhouette is then combined with a faction-specific visual vocabulary.
 - corner crystal buttresses;
 - spinning halo/ring geometry;
 - orbiting crystal crown on the capital.
+
+Enemy units and structures keep this faction shape language but Phase-24 color additions use the hostile palette rather than adding friendly-looking accent colors.
 
 ## Building role readability
 
@@ -161,11 +165,11 @@ Later wrappers call through the enhanced spawn chain, so extra seats and enemy f
 
 1. core line/ranged/mobile/siege roles remain readable when zoomed out;
 2. existing unique weapons/accessories are still visible rather than buried by new geometry;
-3. all four factions read differently at formation distance;
-4. economy/military/defense buildings are easier to distinguish without HUD text;
-5. Wall and Gate details appear after final fortification geometry;
-6. gate animation remains unobstructed;
-7. capital banners/crowns animate correctly;
-8. founder cape/crest does not clip badly during motion;
+3. Greenwake sling/ranged and Prismkin ranged visuals do not read as conventional archers;
+4. all four factions read differently at formation distance;
+5. enemy additions remain visually hostile while preserving faction silhouettes;
+6. economy/military/defense buildings are easier to distinguish without HUD text;
+7. Wall and Gate details appear after final fortification geometry and gate animation remains unobstructed;
+8. capital banners/crowns and founder details animate without severe clipping;
 9. fog-hidden enemies hide all added child meshes with their parent entity;
 10. large multi-seat battles remain within acceptable visual/performance cost.
