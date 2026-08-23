@@ -86,7 +86,7 @@ function enhanceSquad(group, unitDef, faction) {
   if (!group || group.userData.__axmVisualDepth24) return;
   group.userData.__axmVisualDepth24 = true;
   const role = group.userData.combatRole || unitDef?.combat?.role || "line";
-  const members = group.children.filter(child => child?.isGroup);
+  const members = group.children.filter(child => child?.isGroup && Array.isArray(child.userData?.walkParts));
   members.forEach((member, index) => {
     if (member.userData.__axmVisualDepth24) return;
     member.userData.__axmVisualDepth24 = true;
