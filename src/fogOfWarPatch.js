@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { RTSWorld } from "./world.js";
 import { DEFAULT_MAP } from "./maps.js";
 import { flatHeightAt } from "./mapVisuals.js";
+import { firstLineOfSightBlocker } from "./fortificationLineOfSight.js";
 
 const previousSpawnSquad = RTSWorld.prototype.spawnSquad;
 const previousSpawnFounder = RTSWorld.prototype.spawnFounder;
@@ -20,7 +21,8 @@ function sameTeam(world, ownerA, ownerB) {
 
 function visionForEntity(entity) {
   const data = entity?.userData || {};
-  if (Number(data.visionRadius) > 0) return Number(data.visionRadius);
+  const explicit = Number(data.visionRadius);
+  if (Number.isFinite(explicit)) return Math.max(0, explicit);
   if (data.type === "capital") return 14.5;
   if (data.type === "founder") return 11.5;
   if (data.type === "building") return data.role === "defense" ? 12 : 9;
@@ -113,7 +115,22 @@ class FogOfWarSystem {
     );
   }
 
-  markCircle(x, z, radius) {
+  providerSees(provider, x, z, targetEntity = null) {
+    const radius = visionForEntity(provider);
+    if (radius <= 0) return false;
+    const dx = x - provider.position.x;
+    const dz = z - provider.position.z;
+    if (dx * dx + dz * dz > radius * radius) return false;
+    const target = targetEntity || { x, z };
+    return !firstLineOfSightBlocker(this.world, provider, target, {
+      ignore: targetEntity ? [provider, targetEntity] : [provider]
+    });
+  }
+
+  markProviderVision(provider) {
+    const radius = visionForEntity(provider);
+    const x = provider.position.x;
+    const z = provider.position.z;
     const min = this.cellFor(x - radius, z - radius);
     const max = this.cellFor(x + radius, z + radius);
     const radiusSq = radius * radius;
@@ -121,6 +138,7 @@ class FogOfWarSystem {
       for (let col = min.col; col <= max.col; col++) {
         const center = this.cellCenter(col, row);
         if ((center.x - x) ** 2 + (center.z - z) ** 2 > radiusSq) continue;
+        if (!this.providerSees(provider, center.x, center.z)) continue;
         const index = row * this.cols + col;
         this.visible[index] = 1;
         this.explored[index] = 1;
@@ -130,7 +148,8 @@ class FogOfWarSystem {
 
   updateVisibility() {
     this.visible.fill(0);
-    for (const provider of this.providers()) this.markCircle(provider.position.x, provider.position.z, visionForEntity(provider));
+    const providers = this.providers();
+    for (const provider of providers) this.markProviderVision(provider);
 
     for (let index = 0; index < this.tiles.length; index++) {
       const tile = this.tiles[index];
@@ -148,7 +167,7 @@ class FogOfWarSystem {
         entity.userData.__axmFogHidden = false;
         continue;
       }
-      const visible = this.isPointVisible(entity.position.x, entity.position.z);
+      const visible = providers.some(provider => this.providerSees(provider, entity.position.x, entity.position.z, entity));
       entity.visible = visible;
       entity.userData.__axmFogHidden = !visible;
     }
@@ -172,7 +191,7 @@ class FogOfWarSystem {
   isEntityVisibleToPlayer(entity) {
     if (!entity?.userData?.owner) return true;
     if (this.friendlyToPlayer(entity.userData.owner)) return true;
-    return this.isPointVisible(entity.position.x, entity.position.z);
+    return this.providers().some(provider => this.providerSees(provider, entity.position.x, entity.position.z, entity));
   }
 
   exploredPercent() {
@@ -286,7 +305,8 @@ RTSWorld.prototype.spawnCapital = function fogAwareCapital(faction, pos, enemy =
 };
 RTSWorld.prototype.spawnBuilding = function fogAwareBuilding(def, faction, pos, enemy = false) {
   const building = previousSpawnBuilding.call(this, def, faction, pos, enemy);
-  building.userData.visionRadius = def.role === "defense" ? 12 : 9;
+  const explicit = Number(def?.visionRadius);
+  building.userData.visionRadius = def?.fortification ? 0 : Number.isFinite(explicit) ? Math.max(0, explicit) : def.role === "defense" ? 12 : 9;
   return building;
 };
 RTSWorld.prototype.resetDynamic = function fogAwareReset() {
