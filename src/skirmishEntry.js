@@ -9,6 +9,7 @@ import "./rosterAnimationPatch.js";
 import "./unitBuildingVisualPatch.js";
 import "./defenseRosterVisualPatch.js";
 import "./fortificationPatch.js";
+import "./visualDepthPatch.js";
 import "./fogOfWarPatch.js";
 import "./battlePatch.js";
 import "./multiSeatPatch.js";
