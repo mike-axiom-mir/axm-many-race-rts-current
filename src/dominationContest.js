@@ -1,6 +1,7 @@
 import { FACTIONS } from "./factions.js";
 import { territoryDefinition, territoriesAreAdjacent } from "./dominationWorld.js";
 import { dominationGarrisonCount, updateDominationVictory } from "./dominationState.js";
+import { mapSlotForTerritory } from "./dominationMapSlots.js";
 
 function clone(value) { return JSON.parse(JSON.stringify(value)); }
 
@@ -59,6 +60,7 @@ export function startTerritoryContest(match, {
   const contestId = `contest:${sourceId}:${targetId}:${now}`;
   const sourceDef = territoryDefinition(sourceId);
   const targetDef = territoryDefinition(targetId);
+  const targetMap = mapSlotForTerritory(targetId);
   const defenderTeamId = target.owner || "neutral";
   const defenders = target.owner ? clone(target.garrison) : neutralDefenders(targetId);
   const attackingSeat = match.teams[teamId]?.seats.find(seat=>seat.id===seatId) || match.teams[teamId]?.seats.find(seat=>seat.id===source.controllerSeatId) || match.teams[teamId]?.seats[0];
@@ -67,13 +69,13 @@ export function startTerritoryContest(match, {
     id:contestId,
     createdAt:now,
     updatedAt:now,
-    status:targetDef?.mapRef ? "ready" : "awaiting-map",
+    status:targetMap ? "ready" : "awaiting-map",
     sourceId,targetId,
     attacker:{teamId,seatId:attackingSeat?.id||seatId,factionId:source.factionId||attackingSeat?.factionId,forces:expedition},
     defender:{teamId:defenderTeamId,seatId:target.controllerSeatId||null,factionId:target.factionId||defenders[0]?.factionId||null,forces:defenders},
     cities:(targetDef?.cities||[]).map(city=>({id:city.id,name:city.name,owner:target.cities.find(item=>item.id===city.id)?.owner||"neutral",required:true})),
     battle:{
-      mapRef:targetDef?.mapRef||null,
+      mapRef:targetMap,
       battleMapPool:[...(targetDef?.battleMapPool||[])],
       victoryRule:"capture-territory-cities",
       sourceName:sourceDef?.name||sourceId,
@@ -108,6 +110,7 @@ export function makeContestBattlePackage(match, contestId) {
       onlySourceExpedition:true,
       liveReinforcements:false,
       backgroundTerritoriesContinueProduction:true,
+      localEconomyPaysProduction:true,
       victory:"capture-territory-cities"
     }
   };
@@ -139,6 +142,7 @@ export function resolveTerritoryContest(match, contestId, result = {}) {
     target.owner = contest.attacker.teamId;
     target.controllerSeatId = contest.attacker.seatId;
     target.factionId = contest.attacker.factionId;
+    target.productionUnitId = FACTIONS[target.factionId]?.units?.[0]?.id || target.productionUnitId;
     target.lastConqueredAt = now;
     target.garrison = [];
     mergeForces(target.garrison,attackerSurvivors);
