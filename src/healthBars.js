@@ -2,7 +2,11 @@ import * as THREE from "three";
 
 function heightFor(entity) {
   if (entity.userData.type === "capital") return 8.6;
-  if (entity.userData.type === "building") return entity.userData.role === "defense" ? 6.7 : 5.5;
+  if (entity.userData.type === "building") {
+    if (entity.userData.role === "wall") return 2.8;
+    if (entity.userData.role === "gate") return 3.8;
+    return entity.userData.role === "defense" ? 6.7 : 5.5;
+  }
   if (entity.userData.type === "founder") return 3.2;
   return 2.8;
 }
