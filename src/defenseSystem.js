@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { firstLineOfSightBlocker } from "./fortificationLineOfSight.js";
 
 function sameTeam(world, ownerA, ownerB) {
   if (ownerA === ownerB) return true;
@@ -47,10 +48,11 @@ export class DefenseSystem {
       if (sameTeam(this.world, entity.userData.owner, building.userData.owner)) continue;
       if (entity.userData.type !== "squad" && entity.userData.type !== "founder") continue;
       const distance = building.position.distanceTo(entity.position);
-      if (distance < bestDistance) {
-        best = entity;
-        bestDistance = distance;
-      }
+      if (distance >= bestDistance) continue;
+      const blocker = firstLineOfSightBlocker(this.world, building, entity, { ignore: [building, entity] });
+      if (blocker) continue;
+      best = entity;
+      bestDistance = distance;
     }
     return best;
   }
@@ -67,6 +69,7 @@ export class DefenseSystem {
       mesh,
       target,
       owner,
+      source: building,
       damage: Math.max(7, building.userData.damage || 12),
       speed: Math.max(4, Number(building.userData.projectileSpeed) || 13),
       life: Math.max(1, Number(building.userData.projectileLifetime ?? building.userData.projectileLife) || 2.5)
@@ -104,6 +107,24 @@ export class DefenseSystem {
         projectile.mesh.material.dispose();
         this.projectiles.splice(i, 1);
         continue;
+      }
+
+      const blocker = firstLineOfSightBlocker(this.world, projectile.mesh.position, target, { ignore: [projectile.source, target] });
+      if (blocker) {
+        const dx = projectile.mesh.position.x - blocker.position.x;
+        const dz = projectile.mesh.position.z - blocker.position.z;
+        const hitRadius = Math.max(.65, Number(blocker.userData?.fortification?.depth || .85) * .9);
+        if (dx * dx + dz * dz <= (Number(blocker.userData.radius || 2.4) + hitRadius) ** 2) {
+          if (!sameTeam(this.world, projectile.owner, blocker.userData.owner)) {
+            blocker.userData.hp -= Math.max(1, projectile.damage * .75 * armorMultiplier(blocker));
+            if (blocker.userData.hp <= 0) this.world.removeEntity(blocker);
+          }
+          this.group.remove(projectile.mesh);
+          projectile.mesh.geometry.dispose();
+          projectile.mesh.material.dispose();
+          this.projectiles.splice(i, 1);
+          continue;
+        }
       }
 
       const aim = target.position.clone().add(new THREE.Vector3(0, 1.0, 0));
