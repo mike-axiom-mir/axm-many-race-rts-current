@@ -1,5 +1,6 @@
 import { STARTER_FACTIONS } from "./starterFactions.js";
 import { WILDCARD_FACTION } from "./wildcardFaction.js";
+import { applyPlaytestRosterExpansion } from "./playtestRosterExpansion.js";
 
 export const RESOURCE_KEYS = ["food", "wood", "stone", "gold"];
 
@@ -115,6 +116,8 @@ export const FACTIONS = {
     ]
   }
 };
+
+applyPlaytestRosterExpansion(FACTIONS);
 
 export const AGE_DATA = [
   { index: 0, name: "Founding Age", multiplier: 1, cost: null },
