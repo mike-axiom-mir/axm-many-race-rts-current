@@ -11,7 +11,7 @@
   <header class="topbar glass">
     <div class="brand">
       <a href="./index.html" class="brand-mark">AXM</a>
-      <div><h1>Map Builder — Visual Layer</h1><p>Paint terrain • place/scatter scenery • author ramp passages • preview the same low-poly visual language used by Skirmish</p></div>
+      <div><h1>Map Builder — Visual Layer</h1><p>Paint terrain • author movement surfaces and ramp passages • place/scatter scenery • preview the Skirmish visual language</p></div>
     </div>
     <div class="top-actions">
       <a href="./builder.html">Geography Editor</a>
@@ -70,7 +70,7 @@
         <div class="row2"><label>Shape<select id="surfaceShape"><option value="circle">Circle</option><option value="strip">Strip / road / river</option></select></label><label>Opacity<input id="surfaceOpacity" type="number" min="0.08" max="0.92" step="0.05" value="0.62" /></label></div>
         <div class="row2"><label>Radius<input id="surfaceRadius" type="number" min="0.5" max="40" step="0.5" value="6" /></label><label>Rotation<input id="surfaceRotation" type="number" step="5" value="0" /></label></div>
         <div class="row2"><label>Strip length<input id="surfaceLength" type="number" min="1" max="120" step="1" value="24" /></label><label>Strip width<input id="surfaceWidth" type="number" min="0.5" max="30" step="0.5" value="4" /></label></div>
-        <p class="hint">Choose <b>Ramp / Passable Cut</b> and usually use a strip to author an explicit crossing through terrain that is otherwise too steep to walk.</p>
+        <p class="hint">Paint now has live movement language in flat Skirmish: Road 118%, Meadow 103%, Forest Floor 90%, Sand/Ash 88%, Snow 84%, Ice 78%, Shallow Water 55%, Lava 35%. Ramp / Passable Cut is 95% and also opens steep relief.</p>
       </section>
 
       <section>
@@ -103,7 +103,7 @@
       <section>
         <div class="section-title">Map state</div>
         <div id="validation" class="validation"></div>
-        <div class="preview-note">Decorations remain cosmetic for movement in this phase. Terrain relief now owns cliff passability, and Ramp / Passable Cut paint is a real movement opening through steep terrain. Other painted surfaces keep their visual/map-language role.</div>
+        <div class="preview-note">Decorations remain cosmetic for movement. Terrain relief owns cliff passability; Ramp / Passable Cut opens steep terrain; and painted surface skins now apply their authored movement multiplier to formations and founders in flat Skirmish.</div>
       </section>
 
       <section>
