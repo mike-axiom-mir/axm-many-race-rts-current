@@ -72,8 +72,8 @@ export function chooseEnemyBuilding(faction, existing = []) {
   }, {});
   const candidates = faction?.buildings || [];
   const priorities = [
-    roleCounts.economy < 2 ? "economy" : null,
     roleCounts.military < 1 ? "military" : null,
+    roleCounts.economy < 2 ? "economy" : null,
     roleCounts.defense < 2 ? "defense" : null,
     roleCounts.economy < 4 ? "economy" : null,
     roleCounts.military < 2 ? "military" : null,
