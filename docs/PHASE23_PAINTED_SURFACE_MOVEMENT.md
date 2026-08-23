@@ -41,7 +41,7 @@ This is content-first terrain language, not final balance tuning.
 - the movement multiplier at a point;
 - sampled movement cost across a segment.
 
-When surfaces overlap, the later authored surface owns movement at that point, matching the Visual Layer's authoring/render order.
+When surfaces overlap, movement uses a deterministic last-authored priority. This is a movement-rule contract only; it does not claim transparent Three.js draw sorting will always make that same surface visually appear on top. Map authors should avoid ambiguous overlap when the visual result matters.
 
 A custom map may supply `movementMultiplier` directly on a surface object. Runtime clamps that value to a bounded range so malformed map data cannot create zero/infinite movement.
 
@@ -89,6 +89,6 @@ This means built-in maps and exported custom maps use the same capability.
 5. Existing faction/unit speed differences still compose correctly.
 6. Wall/Gate movement rollback remains correct after surface-scaled motion.
 7. Cliff detours prefer a materially faster valid surface route when available.
-8. Surface overlap uses the last-authored visible surface consistently.
+8. Surface overlap applies deterministic last-authored movement priority.
 9. Auto Scout inherits surface speed without new micro.
 10. No unacceptable route-search or frame-time spike appears during local play.
