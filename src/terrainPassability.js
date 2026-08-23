@@ -271,13 +271,16 @@ export function findTerrainRoute(map, from, to, options = {}) {
     cursor = cameFrom.get(cursor);
   }
   keys.reverse();
-  const points = keys.map(key => {
-    const [ix, iz] = key.split(",").map(Number);
-    return pointFor(ix, iz);
-  });
+  const points = [
+    startNode.point,
+    ...keys.map(key => {
+      const [ix, iz] = key.split(",").map(Number);
+      return pointFor(ix, iz);
+    })
+  ];
   const reachesGoal = Boolean(endKey);
   if (reachesGoal) points.push(goal);
-  else if (bestPoint && (!points.length || distance2d(points[points.length - 1], bestPoint) > .1)) points.push(bestPoint);
+  else if (bestPoint && distance2d(points[points.length - 1], bestPoint) > .1) points.push(bestPoint);
 
   return {
     waypoints: simplifyRoute(map, start, points, options),
