@@ -1,7 +1,9 @@
 import { STARTER_FACTION_NPCS } from "./starterFactionNpcs.js";
+import { WILDCARD_FACTION_NPCS } from "./wildcardFactionNpc.js";
 
 export const FACTION_NPCS = {
   ...STARTER_FACTION_NPCS,
+  ...WILDCARD_FACTION_NPCS,
 
   northpole: {
     id: "npc-northpole-steward",
@@ -67,8 +69,7 @@ export const FACTION_NPCS = {
     }
   },
   clockworkOrchard: {
-    id: "npc-clockwork-gardener",
-    factionId: "clockworkOrchard",
+    id: "clockworkOrchard",
     name: "The Orchard Tactician",
     role: "Native faction strategist",
     summary: "Fewer formations, stronger positions, careful resource timing and deliberate high-value engagements.",
