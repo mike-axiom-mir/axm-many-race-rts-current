@@ -34,6 +34,7 @@ export const SURFACE_SKINS = [
   { id: "lava", name: "Lava", color: "#b64b2d", roughness: .45, movement: .35, hazardous: true },
   { id: "shallow-water", name: "Shallow Water", color: "#4f91a5", roughness: .35, movement: .55 },
   { id: "road", name: "Road", color: "#aa936e", roughness: 1, movement: 1.18 },
+  { id: "ramp", name: "Ramp / Passable Cut", color: "#b8a47d", roughness: .96, movement: .95, movementPassage: true },
   { id: "farm", name: "Farmland", color: "#8f8552", roughness: 1, movement: .92 },
   { id: "alien-purple", name: "Alien Purple", color: "#75558d", roughness: .72, movement: .96 },
   { id: "alien-teal", name: "Alien Teal", color: "#4e8e84", roughness: .72, movement: 1 }

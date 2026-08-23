@@ -3,6 +3,7 @@ import "./defenseRosterRegistryPatch.js";
 import "./scoutRegistryPatch.js";
 import "./mapVisualRuntimePatch.js";
 import "./mapReliefPatch.js";
+import "./terrainMovementPatch.js";
 import "./combatDepthPatch.js";
 import "./rosterAnimationPatch.js";
 import "./unitBuildingVisualPatch.js";
