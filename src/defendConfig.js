@@ -1,8 +1,8 @@
 export const DEFEND_VERSION = 1;
 
 export const DEFEND_DIFFICULTIES = {
-  relaxed: { id: "relaxed", name: "Relaxed", enemyHealth: .82, enemyDamage: .78, reward: 1.18, workshopHealth: 1.18 },
   normal: { id: "normal", name: "Standard", enemyHealth: 1, enemyDamage: 1, reward: 1, workshopHealth: 1 },
+  relaxed: { id: "relaxed", name: "Relaxed", enemyHealth: .82, enemyDamage: .78, reward: 1.18, workshopHealth: 1.18 },
   hard: { id: "hard", name: "Hard", enemyHealth: 1.2, enemyDamage: 1.17, reward: .94, workshopHealth: .94 },
   absurd: { id: "absurd", name: "Workshop Panic", enemyHealth: 1.45, enemyDamage: 1.35, reward: .90, workshopHealth: .88 }
 };
@@ -53,11 +53,11 @@ export const DEFEND_ATLAS_ENTRIES = [
   {
     id: "structure:workshop-core", type: "structure", name: "The Workshop", icon: "▣", subtitle: "Defend the Workshop objective",
     summary: "Shared co-op objective at the center of survival mode. If it falls, every defending seat loses together.",
-    tags: ["defend-workshop", "objective", "coop", "structure"], stats: { role: "shared objective", baseHp: 3600 }
+    tags: ["defend-workshop", "objective", "coop", "structure"], stats: { role: "shared objective", baseHp: 3600 }, source: "builtin-defend-workshop"
   },
   {
     id: "structure:workshop-guard-tower", type: "structure", name: "Workshop Guard Tower", icon: "▲", subtitle: "Survival defense",
     summary: "A deliberately stronger fixed-perimeter defensive tower bought with shared Workshop Supply. Wave upgrades can improve its damage, range, fire rate and durability.",
-    tags: ["defend-workshop", "tower", "defense"], stats: { baseDamage: 44, baseRange: 14, baseFireInterval: .82, baseHp: 980 }
+    tags: ["defend-workshop", "tower", "defense"], stats: { baseDamage: 44, baseRange: 14, baseFireInterval: .82, baseHp: 980 }, source: "builtin-defend-workshop"
   }
 ];
