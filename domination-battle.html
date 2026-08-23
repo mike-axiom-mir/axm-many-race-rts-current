@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#050b12" />
+  <title>AXM Many-Race RTS — Territory Battle Staging</title>
+  <link rel="stylesheet" href="domination-battle.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="head glass">
+      <div class="identity"><a href="./domination.html" class="mark">AXM</a><div><div class="eyebrow">WORLD DOMINATION</div><h1>Territory Battle Staging</h1><p>Strategic state → attached map → live RTS adapter → result packet.</p></div></div>
+      <a href="./domination.html">← Return to globe</a>
+    </header>
+
+    <main class="layout">
+      <section class="panel glass">
+        <div class="eyebrow">BATTLE CONTRACT</div>
+        <h2 id="battleTitle">No staged battle</h2>
+        <p id="battleSubtitle" class="muted">Open a live contest from World Domination first.</p>
+        <div id="validation" class="validation"></div>
+        <div id="runtimeStatus" class="runtime-status"></div>
+        <div class="actions"><button id="copyPacketBtn">Copy battle packet</button><button id="exportPacketBtn">Export packet</button></div>
+      </section>
+
+      <section class="panel glass">
+        <div class="eyebrow">EXPEDITION</div>
+        <h2 id="attackerName">Attacker</h2>
+        <div id="attackerForces" class="force-list"></div>
+        <div class="eyebrow divider">DEFENDERS</div>
+        <h2 id="defenderName">Defender</h2>
+        <div id="defenderForces" class="force-list"></div>
+      </section>
+
+      <section class="panel glass">
+        <div class="eyebrow">TERRITORY OBJECTIVES</div>
+        <h2>Cities</h2>
+        <div id="cityObjectives" class="city-list"></div>
+        <div class="truth"><b>Important:</b> this page does not pretend the existing Skirmish/Globe runtime already injects these exact forces. It is the stable adapter boundary. The future battle runtime consumes this packet and returns a result packet.</div>
+      </section>
+
+      <section class="panel glass result-panel">
+        <div class="eyebrow">RESULT HANDOFF</div>
+        <h2>Apply completed battle</h2>
+        <p class="muted">When a battle runtime exists, it returns a `.domination-result.json` containing the winner, surviving formations and city ownership. Import that here to update the persistent globe.</p>
+        <button id="importResultBtn">Import result packet</button>
+        <input id="resultFile" type="file" accept="application/json,.json" hidden />
+        <div id="resultStatus" class="validation"></div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="src/dominationBattlePage.js"></script>
+</body>
+</html>
