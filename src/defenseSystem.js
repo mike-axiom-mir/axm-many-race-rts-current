@@ -58,8 +58,8 @@ export class DefenseSystem {
       target,
       owner,
       damage: Math.max(7, building.userData.damage || 12),
-      speed: 13,
-      life: 2.5
+      speed: Math.max(4, Number(building.userData.projectileSpeed) || 13),
+      life: Math.max(1, Number(building.userData.projectileLife) || 2.5)
     });
   }
 
@@ -73,11 +73,12 @@ export class DefenseSystem {
       this.cooldowns.set(building, cooldown);
       if (cooldown > 0) continue;
 
-      const target = this.nearestTarget(building, 11.5);
+      const range = Math.max(2, Number(building.userData.defenseRange) || 11.5);
+      const target = this.nearestTarget(building, range);
       if (!target) continue;
 
       this.fire(building, target);
-      this.cooldowns.set(building, 1.25);
+      this.cooldowns.set(building, Math.max(.18, Number(building.userData.fireInterval) || 1.25));
     }
   }
 

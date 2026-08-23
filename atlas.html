@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#07101a" />
+  <title>AXM Many-Race RTS — Atlas Library</title>
+  <link rel="stylesheet" href="atlas.css" />
+</head>
+<body>
+  <div class="atlas-shell">
+    <header class="atlas-head">
+      <div class="identity"><a href="./index.html" class="mark">AXM</a><div><div class="eyebrow">PLAYER CODEX</div><h1>Atlas Library</h1><p>Everything that enters the game should have a discoverable home.</p></div></div>
+      <div class="head-actions"><a href="./factions.html">Faction Hall</a><a href="./howto.html">How to Play</a><a href="./index.html">Main menu</a></div>
+    </header>
+
+    <main class="atlas-layout">
+      <aside class="left glass">
+        <div class="eyebrow">FILTER</div>
+        <input id="search" class="search" placeholder="Search names, mechanics, tags…" autocomplete="off" />
+        <div id="typeFilters" class="type-filters"></div>
+        <div class="atlas-note"><b>Auto-indexed.</b> Built-in faction and world content is generated from the same data the game uses. Imported content packs can register here too, so Atlas does not become a forgotten duplicate database.</div>
+      </aside>
+
+      <section class="middle glass">
+        <div class="list-head"><div><div class="eyebrow">INDEX</div><h2 id="resultTitle">All entries</h2></div><span id="resultCount"></span></div>
+        <div id="entryList" class="entry-list"></div>
+      </section>
+
+      <aside class="detail glass">
+        <div id="emptyDetail" class="empty-detail"><div class="big-icon">◇</div><h2>Select an Atlas entry</h2><p>Units, structures, terrain, upgrades, modes and faction lore all use the same reader.</p></div>
+        <article id="detailBody" class="detail-body hidden"></article>
+      </aside>
+    </main>
+  </div>
+  <script type="module">
+    await import("./src/atlasExtensions.js");
+    await import("./src/atlas.js");
+  </script>
+</body>
+</html>

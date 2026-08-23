@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="theme-color" content="#070d14" />
+  <title>AXM Many-Race RTS — Defend the Workshop</title>
+  <link rel="stylesheet" href="defend.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="viewport"></div>
+    <header class="topbar glass">
+      <div class="identity"><a href="./index.html" class="mark">AXM</a><div><div class="eyebrow">CO-OP SURVIVAL</div><h1>Defend the Workshop</h1><p>Shared objective • scarce supply • escalating waves</p></div></div>
+      <div class="links"><a href="./atlas.html">Atlas</a><a href="./index.html">Main menu</a></div>
+    </header>
+
+    <section id="setup" class="setup glass">
+      <div class="setup-copy"><div class="eyebrow">SURVIVAL MODE</div><h2>They found the Workshop. That seems unfortunate.</h2><p>Bring 1–4 allied seats. The Workshop generates only a small supply trickle, so every tower, repair and formation matters. Each cleared wave increases income and offers one upgrade choice.</p></div>
+      <div id="seatSetup" class="seat-setup"></div>
+      <div class="setup-options">
+        <label>Difficulty<select id="difficulty"></select></label>
+        <label>Run length<select id="runLength"><option value="10">10 waves</option><option value="15">15 waves</option><option value="20">20 waves</option><option value="0">Endless</option></select></label>
+      </div>
+      <div id="setupValidation" class="validation"></div>
+      <button id="startBtn" class="big primary">FORTIFY THE WORKSHOP</button>
+      <p class="truth">Shared-screen human seats use the active-seat selector for macro commands in this prototype. Connected-AI seats have a command event surface; independent controllers/network routing remain a later adapter.</p>
+    </section>
+
+    <aside id="leftHud" class="hud left glass hidden">
+      <div class="eyebrow">WORKSHOP STATE</div>
+      <div class="workshop-health"><div><b id="workshopHp">0 / 0</b><span>Workshop integrity</span></div><div class="bar"><i id="workshopBar"></i></div></div>
+      <div class="metrics"><div><span>Supply</span><b id="supply">0</b></div><div><span>Passive</span><b id="supplyRate">0/s</b></div><div><span>Wave</span><b id="wave">0</b></div><div><span>Hostiles</span><b id="hostiles">0</b></div></div>
+
+      <div class="section-title">Active allied seat</div>
+      <select id="activeSeat" class="wide"></select>
+      <div id="activeFaction" class="faction-box"></div>
+
+      <div class="section-title">Spend Workshop Supply</div>
+      <div class="stack">
+        <button id="towerBtn"><b>Build Guard Tower</b><small id="towerCost">180 supply</small></button>
+        <button id="repairBtn"><b>Repair Workshop</b><small id="repairCost">80 supply</small></button>
+      </div>
+      <div id="recruitButtons" class="stack"></div>
+    </aside>
+
+    <aside id="rightHud" class="hud right glass hidden">
+      <div class="eyebrow">DEFENSE DOCTRINE</div>
+      <div class="stack commands">
+        <button data-command="hold">Hold Workshop</button>
+        <button data-command="intercept">Intercept nearest wave</button>
+        <button data-command="north">Push north</button>
+        <button data-command="east">Push east</button>
+        <button data-command="south">Push south</button>
+        <button data-command="west">Push west</button>
+        <button data-command="move" class="primary">Move selected seat…</button>
+      </div>
+
+      <div class="section-title">Perimeter</div>
+      <div id="perimeter" class="perimeter"></div>
+      <div class="section-title">Run upgrades</div>
+      <div id="ownedUpgrades" class="owned"></div>
+    </aside>
+
+    <div id="moveHint" class="move-hint hidden">Tap open ground to move the active seat</div>
+    <div id="toast" class="toast hidden"></div>
+
+    <section id="wavePanel" class="wave-panel glass hidden">
+      <div><div class="eyebrow" id="waveKicker">INTERMISSION</div><h2 id="waveTitle">Workshop holding</h2><p id="waveText"></p></div>
+      <button id="nextWaveBtn" class="primary">START WAVE 1</button>
+    </section>
+
+    <section id="upgradePanel" class="upgrade-panel glass hidden">
+      <div class="eyebrow">WAVE CLEARED • CHOOSE ONE</div>
+      <h2 id="upgradeTitle">Improve the Workshop</h2>
+      <p>Every wave grants exactly one choice. The supply reward is already yours.</p>
+      <div id="upgradeChoices" class="upgrade-choices"></div>
+    </section>
+
+    <section id="endPanel" class="end-panel glass hidden">
+      <div class="eyebrow" id="endKicker">RUN COMPLETE</div><h2 id="endTitle"></h2><p id="endText"></p>
+      <div class="end-actions"><button id="restartBtn">Run it again</button><a href="./index.html">Main menu</a></div>
+    </section>
+  </div>
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}</script>
+  <script type="module" src="src/defendWorkshop.js"></script>
+  <script type="module" src="src/defendLifecyclePatch.js"></script>
+</body>
+</html>
