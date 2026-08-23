@@ -61,9 +61,7 @@ function materialList(root) {
 function setRootOpacity(root, alpha) {
   for (const material of materialList(root)) {
     material.userData ||= {};
-    if (material.userData.__axmBaseOpacity === undefined) {
-      material.userData.__axmBaseOpacity = Number(material.opacity ?? 1);
-    }
+    if (material.userData.__axmBaseOpacity === undefined) material.userData.__axmBaseOpacity = Number(material.opacity ?? 1);
     const base = Number(material.userData.__axmBaseOpacity || 1);
     material.transparent = alpha < .995 || material.transparent;
     material.opacity = Math.max(0, Math.min(base, base * alpha));
@@ -89,6 +87,27 @@ function charStructure(root) {
     if (material.emissive?.isColor) material.emissive.multiplyScalar(.18);
     if ("roughness" in material) material.roughness = Math.max(.9, Number(material.roughness || 0));
     if ("metalness" in material) material.metalness = Math.min(.08, Number(material.metalness || 0));
+  }
+}
+
+function syncFxVisibility(world, entry) {
+  if (!entry?.root) return;
+  const fog = world.__axmFogSystem;
+  if (!entry.owner || !fog) {
+    if (entry.initialVisible !== undefined) entry.root.visible = Boolean(entry.initialVisible);
+    return;
+  }
+  const friendly = typeof fog.friendlyToPlayer === "function"
+    ? fog.friendlyToPlayer(entry.owner)
+    : entry.owner === "player";
+  if (friendly) {
+    entry.root.visible = true;
+    return;
+  }
+  if (typeof fog.isPointVisible === "function") {
+    entry.root.visible = fog.isPointVisible(Number(entry.worldX || 0), Number(entry.worldZ || 0));
+  } else {
+    entry.root.visible = Boolean(entry.initialVisible);
   }
 }
 
@@ -141,20 +160,20 @@ function animateAttackVisual(entity, dt) {
     member.rotation.z = entry.rotationZ;
 
     if (attack.role === "ranged") {
-      if (!entry.rootEntity) member.position.z = entry.position.z + .07 * envelope;
+      if (!entry.rootEntity) member.position.z = entry.position.z - .07 * envelope;
       member.rotation.x = entry.rotationX + .10 * envelope;
     } else if (attack.role === "mobile") {
       if (!entry.rootEntity) {
-        member.position.z = entry.position.z - .22 * envelope;
+        member.position.z = entry.position.z + .22 * envelope;
         member.position.y = entry.position.y + .07 * envelope;
       }
       member.rotation.x = entry.rotationX - .08 * envelope;
     } else if (attack.role === "siege") {
-      if (!entry.rootEntity) member.position.z = entry.position.z - .08 * envelope;
+      if (!entry.rootEntity) member.position.z = entry.position.z + .08 * envelope;
       member.rotation.x = entry.rotationX - .13 * envelope;
       member.rotation.z = entry.rotationZ + (index % 2 ? -.04 : .04) * envelope;
     } else {
-      if (!entry.rootEntity) member.position.z = entry.position.z - .16 * envelope;
+      if (!entry.rootEntity) member.position.z = entry.position.z + .16 * envelope;
       member.rotation.x = entry.rotationX - .18 * envelope;
     }
 
@@ -166,6 +185,14 @@ function animateAttackVisual(entity, dt) {
   }
 
   if (progress >= 1) restoreAttackVisual(entity);
+}
+
+function restoreTowerVisual(building) {
+  const attack = building?.userData?.__axmTowerAttackVisual;
+  if (!attack) return;
+  building.scale.copy(attack.scale);
+  building.rotation.x = attack.rotationX;
+  delete building.userData.__axmTowerAttackVisual;
 }
 
 function triggerTowerVisual(building) {
@@ -195,11 +222,7 @@ function animateTowerVisual(building, dt) {
     attack.scale.z * (1 + .025 * envelope)
   );
   building.rotation.x = attack.rotationX - .018 * envelope;
-  if (progress >= 1) {
-    building.scale.copy(attack.scale);
-    building.rotation.x = attack.rotationX;
-    delete building.userData.__axmTowerAttackVisual;
-  }
+  if (progress >= 1) restoreTowerVisual(building);
 }
 
 function spawnMuzzleFlash(world, building) {
@@ -211,7 +234,11 @@ function spawnMuzzleFlash(world, building) {
   );
   mesh.position.copy(building.position).add(new THREE.Vector3(0, 4.2, 0));
   fx.group.add(mesh);
-  fx.entries.push({ kind: "flash", root: mesh, age: 0, duration: .22 });
+  fx.entries.push({
+    kind: "flash", root: mesh, age: 0, duration: .22,
+    owner: building.userData.owner, worldX: building.position.x, worldZ: building.position.z,
+    initialVisible: building.visible
+  });
 }
 
 function prepareUnitDeath(world, entity) {
@@ -231,37 +258,30 @@ function prepareUnitDeath(world, entity) {
     delay: Math.min(.28, index * .045)
   }));
   fx.entries.push({
-    kind: "unit-death",
-    root: entity,
-    age: 0,
+    kind: "unit-death", root: entity, age: 0,
     duration: entity.userData.type === "founder" ? 2.8 : 2.3,
-    members
+    members, owner: entity.userData.owner,
+    worldX: entity.position.x, worldZ: entity.position.z, initialVisible: visible
   });
 }
 
 function prepareStructureDeath(world, entity) {
   const fx = ensureFx(world);
+  restoreTowerVisual(entity);
   const visible = entity.visible;
   const sourceColor = sampleEntityColor(entity);
   charStructure(entity);
   fx.group.add(entity);
   entity.visible = visible;
   fx.entries.push({
-    kind: "structure-collapse",
-    root: entity,
-    age: 0,
+    kind: "structure-collapse", root: entity, age: 0,
     duration: entity.userData.type === "capital" ? 1.55 : entity.userData.fortification ? .78 : 1.15,
-    basePosition: entity.position.clone(),
-    baseScale: entity.scale.clone(),
-    baseRotationX: entity.rotation.x,
-    baseRotationZ: entity.rotation.z,
+    basePosition: entity.position.clone(), baseScale: entity.scale.clone(),
+    baseRotationX: entity.rotation.x, baseRotationZ: entity.rotation.z,
     direction: hashString(`${entity.userData.id || entity.userData.type}:${entity.position.x}:${entity.position.z}`) % 2 ? -1 : 1,
-    sourceColor,
-    visible,
-    sourceType: entity.userData.type,
-    role: entity.userData.role,
-    radius: Number(entity.userData.radius || 2.4),
-    sourceId: entity.userData.id || entity.userData.type
+    sourceColor, visible, sourceType: entity.userData.type, role: entity.userData.role,
+    radius: Number(entity.userData.radius || 2.4), sourceId: entity.userData.id || entity.userData.type,
+    owner: entity.userData.owner, worldX: entity.position.x, worldZ: entity.position.z, initialVisible: visible
   });
 }
 
@@ -324,10 +344,9 @@ function makeWreck(world, entry) {
 
   fx.group.add(wreck);
   fx.entries.push({
-    kind: "wreck",
-    root: wreck,
-    age: 0,
-    duration: entry.sourceType === "capital" ? 28 : entry.role === "wall" || entry.role === "gate" ? 13 : 20
+    kind: "wreck", root: wreck, age: 0,
+    duration: entry.sourceType === "capital" ? 28 : entry.role === "wall" || entry.role === "gate" ? 13 : 20,
+    owner: entry.owner, worldX: entry.worldX, worldZ: entry.worldZ, initialVisible: entry.initialVisible
   });
 }
 
@@ -337,6 +356,7 @@ function updateFx(world, time, dt) {
   for (let index = fx.entries.length - 1; index >= 0; index--) {
     const entry = fx.entries[index];
     entry.age += dt;
+    syncFxVisibility(world, entry);
     const progress = clamp01(entry.age / Math.max(.01, entry.duration));
 
     if (entry.kind === "flash") {
