@@ -9,9 +9,25 @@ import {
 } from "./dominationWorld.js";
 
 export const DOMINATION_STORAGE_KEY = "axm.manyRaceRts.worldDomination.v1";
+const RESOURCE_KEYS = ["food", "wood", "stone", "gold"];
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function zeroResources() {
+  return { food: 0, wood: 0, stone: 0, gold: 0 };
+}
+
+function createFinanceLedger() {
+  return {
+    grossIncome: zeroResources(),
+    productionSpent: zeroResources(),
+    treasuryTransferred: zeroResources(),
+    projectedNetPerMinute: zeroResources(),
+    formationsProduced: 0,
+    blockedProductionCycles: 0
+  };
 }
 
 export function createDominationSeat(teamId, index) {
@@ -54,12 +70,12 @@ export function createDominationMatch(teamSize = 1) {
       azure:{
         id:"azure", name:"Azure Clan",
         seats:Array.from({length:seatsPerTeam},(_,index)=>createDominationSeat("azure",index)),
-        globalResources:{food:0,wood:0,stone:0,gold:0}, expeditionReserve:[], producedSinceReserve:0, score:0
+        globalResources:zeroResources(), expeditionReserve:[], producedSinceReserve:0, score:0
       },
       crimson:{
         id:"crimson", name:"Crimson Clan",
         seats:Array.from({length:seatsPerTeam},(_,index)=>createDominationSeat("crimson",index)),
-        globalResources:{food:0,wood:0,stone:0,gold:0}, expeditionReserve:[], producedSinceReserve:0, score:0
+        globalResources:zeroResources(), expeditionReserve:[], producedSinceReserve:0, score:0
       }
     },
     territories:Object.fromEntries(DOMINATION_TERRITORIES.map(definition=>{
@@ -72,8 +88,10 @@ export function createDominationMatch(teamSize = 1) {
         owner,
         controllerSeatId:isAzure?"azure-seat-1":isCrimson?"crimson-seat-1":null,
         factionId,
+        productionUnitId:factionId?FACTIONS[factionId]?.units?.[0]?.id:null,
         cities:definition.cities.map(city=>({...city,owner:owner||"neutral"})),
-        localResources:owner?{food:240,wood:220,stone:170,gold:150}:{food:0,wood:0,stone:0,gold:0},
+        localResources:owner?{food:240,wood:220,stone:170,gold:150}:zeroResources(),
+        finance:createFinanceLedger(),
         garrison:owner?starterGarrison(definition.id,factionId):[],
         productionProgress:0,
         lockedByContestId:null,
@@ -96,9 +114,18 @@ export function normalizeDominationMatch(input = {}) {
   };
   match.territories = Object.fromEntries(DOMINATION_TERRITORIES.map(def=>{
     const current = input.territories?.[def.id] || {};
+    const baseFinance = base.territories[def.id].finance;
     return [def.id,{
       ...base.territories[def.id],...current,
       localResources:{...base.territories[def.id].localResources,...(current.localResources||{})},
+      finance:{
+        ...baseFinance,
+        ...(current.finance||{}),
+        grossIncome:{...baseFinance.grossIncome,...(current.finance?.grossIncome||{})},
+        productionSpent:{...baseFinance.productionSpent,...(current.finance?.productionSpent||{})},
+        treasuryTransferred:{...baseFinance.treasuryTransferred,...(current.finance?.treasuryTransferred||{})},
+        projectedNetPerMinute:{...baseFinance.projectedNetPerMinute,...(current.finance?.projectedNetPerMinute||{})}
+      },
       cities:def.cities.map(city=>({...city,...(current.cities?.find(item=>item.id===city.id)||{})})),
       garrison:Array.isArray(current.garrison)?current.garrison.map(item=>({...item})):base.territories[def.id].garrison
     }];
@@ -125,7 +152,11 @@ export function saveDominationMatch(match) {
 }
 
 function addResource(target, key, amount) {
-  target[key] = Math.max(0, Number(target[key] || 0) + amount);
+  target[key] = Math.max(0, Number(target[key] || 0) + Number(amount || 0));
+}
+
+function addLedgerResources(ledger, key, amount) {
+  ledger[key] = Number(ledger[key] || 0) + Number(amount || 0);
 }
 
 function cityControlMultiplier(territoryState) {
@@ -149,29 +180,87 @@ function pushFormation(territoryState, factionId, unitId, count = 1) {
   entry.count += count;
 }
 
-function produceOneFormation(match, territoryDef, territoryState) {
-  if (!territoryState.owner || territoryState.lockedByContestId) return false;
-  if (garrisonCount(territoryState) >= territoryDef.garrisonLimit) return false;
+function productionIdentity(match, territoryState) {
   const team = match.teams[territoryState.owner];
   const seat = team?.seats.find(item=>item.id===territoryState.controllerSeatId) || team?.seats[0];
   const factionId = territoryState.factionId || seat?.factionId;
   const faction = FACTIONS[factionId];
-  if (!faction) return false;
-  const unit = faction.units[0];
-  pushFormation(territoryState,factionId,unit.id,1);
-  team.producedSinceReserve = Number(team.producedSinceReserve||0) + 1;
-  if (team.producedSinceReserve >= RESERVE_PRODUCTION_STEP) {
-    team.producedSinceReserve -= RESERVE_PRODUCTION_STEP;
-    team.expeditionReserve.push({
-      id:`reserve:${team.id}:${Date.now()}:${team.expeditionReserve.length}`,
-      factionId,
-      unitId:unit.id,
+  if (!faction) return null;
+  const unit = faction.units.find(item=>item.id===territoryState.productionUnitId) || faction.units[0];
+  return unit ? {team,seat,factionId,faction,unit} : null;
+}
+
+export function dominationUnitCost(faction, unit) {
+  const multiplier = Number(faction?.military?.cost || 1);
+  return Object.fromEntries(RESOURCE_KEYS.map(key=>[key,Math.ceil(Number(unit?.cost?.[key]||0)*multiplier)]));
+}
+
+function canAfford(resources, cost) {
+  return RESOURCE_KEYS.every(key=>Number(resources[key]||0)>=Number(cost[key]||0));
+}
+
+function spend(resources, cost, ledger) {
+  for(const key of RESOURCE_KEYS){
+    const amount=Number(cost[key]||0);
+    resources[key]=Math.max(0,Number(resources[key]||0)-amount);
+    addLedgerResources(ledger.productionSpent,key,amount);
+  }
+}
+
+function reserveFloorFor(identity) {
+  const cost = dominationUnitCost(identity?.faction,identity?.unit);
+  return Object.fromEntries(RESOURCE_KEYS.map(key=>[key,Math.max(55,Math.ceil(Number(cost[key]||0)*2.25))]));
+}
+
+function sweepEconomicSurplus(team, territoryState, identity) {
+  const floor = reserveFloorFor(identity);
+  for(const key of RESOURCE_KEYS){
+    const available=Math.max(0,Number(territoryState.localResources[key]||0)-floor[key]);
+    if(available<=0)continue;
+    territoryState.localResources[key]-=available;
+    addResource(team.globalResources,key,available);
+    addLedgerResources(territoryState.finance.treasuryTransferred,key,available);
+  }
+}
+
+function updateProjectedFinance(territoryDef, territoryState, identity, multiplier) {
+  const cost = identity ? dominationUnitCost(identity.faction,identity.unit) : zeroResources();
+  const perMinuteCycles = identity ? 60 / Math.max(10,Number(territoryDef.unitProductionSeconds)||45) : 0;
+  for(const key of RESOURCE_KEYS){
+    const grossPerMinute=Number(territoryDef.resourceRate[key]||0)*multiplier*60;
+    const productionPerMinute=Number(cost[key]||0)*perMinuteCycles;
+    territoryState.finance.projectedNetPerMinute[key]=grossPerMinute-productionPerMinute;
+  }
+}
+
+function produceOneFormation(match, territoryDef, territoryState) {
+  if (!territoryState.owner || territoryState.lockedByContestId) return {produced:false,reason:"locked"};
+  if (garrisonCount(territoryState) >= territoryDef.garrisonLimit) return {produced:false,reason:"garrison-full"};
+  const identity = productionIdentity(match,territoryState);
+  if (!identity) return {produced:false,reason:"no-production-unit"};
+  const cost = dominationUnitCost(identity.faction,identity.unit);
+  if(!canAfford(territoryState.localResources,cost)){
+    territoryState.finance.blockedProductionCycles=Number(territoryState.finance.blockedProductionCycles||0)+1;
+    return {produced:false,reason:"economy",cost};
+  }
+
+  spend(territoryState.localResources,cost,territoryState.finance);
+  pushFormation(territoryState,identity.factionId,identity.unit.id,1);
+  territoryState.finance.formationsProduced=Number(territoryState.finance.formationsProduced||0)+1;
+  identity.team.producedSinceReserve = Number(identity.team.producedSinceReserve||0) + 1;
+  if (identity.team.producedSinceReserve >= RESERVE_PRODUCTION_STEP) {
+    identity.team.producedSinceReserve -= RESERVE_PRODUCTION_STEP;
+    identity.team.expeditionReserve.push({
+      id:`reserve:${identity.team.id}:${Date.now()}:${identity.team.expeditionReserve.length}`,
+      factionId:identity.factionId,
+      unitId:identity.unit.id,
       count:1,
       createdAt:Date.now(),
-      assignedTerritoryId:null
+      assignedTerritoryId:null,
+      sourceTerritoryId:territoryState.id
     });
   }
-  return true;
+  return {produced:true,cost};
 }
 
 export function tickDomination(match, elapsedSeconds) {
@@ -184,21 +273,34 @@ export function tickDomination(match, elapsedSeconds) {
     const team = match.teams[state.owner];
     if (!team) continue;
     const multiplier = cityControlMultiplier(state);
+    const identity = productionIdentity(match,state);
+
+    // Map income is local first. Production must pay from this local treasury.
     for (const [key,rate] of Object.entries(territoryDef.resourceRate)) {
       const gain = Number(rate||0) * multiplier * seconds;
-      addResource(state.localResources,key,gain*.72);
-      addResource(team.globalResources,key,gain*.28);
+      addResource(state.localResources,key,gain);
+      addLedgerResources(state.finance.grossIncome,key,gain);
     }
 
-    if (!state.lockedByContestId) {
+    updateProjectedFinance(territoryDef,state,identity,multiplier);
+
+    if (!state.lockedByContestId && identity) {
       state.productionProgress = Number(state.productionProgress||0) + seconds * multiplier;
       const interval = Math.max(10, Number(territoryDef.unitProductionSeconds)||45);
       let guard = 0;
-      while (state.productionProgress >= interval && guard++ < 30) {
+      while (state.productionProgress >= interval && guard++ < 1400) {
+        const result = produceOneFormation(match,territoryDef,state);
+        if (!result.produced) {
+          // Keep one completed cycle queued, but do not stockpile hundreds of free instant builds.
+          state.productionProgress = Math.min(state.productionProgress,interval*1.05);
+          break;
+        }
         state.productionProgress -= interval;
-        if (!produceOneFormation(match,territoryDef,state)) break;
       }
     }
+
+    // Only genuine surplus after local operating needs moves into the clan treasury.
+    sweepEconomicSurplus(team,state,identity);
   }
 
   match.lastTickAt = Number(match.lastTickAt||Date.now()) + seconds*1000;
@@ -254,4 +356,20 @@ export function updateDominationVictory(match) {
 
 export function dominationGarrisonCount(territoryState) {
   return garrisonCount(territoryState);
+}
+
+export function territoryEconomySnapshot(match, territoryId) {
+  const territory = match.territories[territoryId];
+  const definition = territoryDefinition(territoryId);
+  if(!territory||!definition)return null;
+  const identity=productionIdentity(match,territory);
+  return {
+    localResources:{...territory.localResources},
+    productionUnit:identity?{factionId:identity.factionId,unitId:identity.unit.id,name:identity.unit.name,cost:dominationUnitCost(identity.faction,identity.unit)}:null,
+    finance:clone(territory.finance),
+    productionProgress:Number(territory.productionProgress||0),
+    productionInterval:Number(definition.unitProductionSeconds||45),
+    garrison:garrisonCount(territory),
+    garrisonLimit:definition.garrisonLimit
+  };
 }
