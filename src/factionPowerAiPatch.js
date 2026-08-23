@@ -10,10 +10,10 @@ FactionPowerSystem.prototype.maybeUseEnemyPower = function greedAwareEnemyPowerD
   const enemyCapitalAlive = this.world.entities.some(entity =>
     entity.parent && entity.userData.hp > 0 && entity.userData.owner === owner && entity.userData.type === "capital"
   );
-  const playerCapitalAlive = this.world.entities.some(entity =>
+  const playerCapital = this.world.entities.find(entity =>
     entity.parent && entity.userData.hp > 0 && entity.userData.owner === "player" && entity.userData.type === "capital"
   );
-  if (!enemyCapitalAlive || !playerCapitalAlive) return;
+  if (!enemyCapitalAlive || !playerCapital) return;
   if (!powers || this.time < enemyState.aiNextDecision || this.cooldownRemaining(owner) > 0) {
     return previousEnemyDecision.call(this);
   }
@@ -26,8 +26,11 @@ FactionPowerSystem.prototype.maybeUseEnemyPower = function greedAwareEnemyPowerD
 
   // Economy greed is an opening, not an automatic punishment. The AI only
   // commits if it has at least a small real army and both sides can still fight.
+  // When it does commit, the power is paired with an actual pressure order so
+  // the player's missing Defense button has a concrete battlefield consequence.
   if (playerGreed && squads.length >= 3) {
     const result = this.activate(owner, powers.attack.id, "ai");
+    if (result.ok) this.world.command(owner, playerCapital.position.clone());
     enemyState.aiNextDecision = result.ok ? enemyState.cooldownUntil + .5 : this.time + 4;
     return;
   }
