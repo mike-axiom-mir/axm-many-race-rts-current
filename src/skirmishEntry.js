@@ -1,3 +1,4 @@
+import "./selectedMapPatch.js";
 import "./combatDepthPatch.js";
 import "./rosterAnimationPatch.js";
 import "./battlePatch.js";
