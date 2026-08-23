@@ -1,3 +1,4 @@
+import "./combatDepthPatch.js";
 import "./battlePatch.js";
 import "./multiSeatPatch.js";
 import "./seatCommandAuthorityPatch.js";
