@@ -80,6 +80,33 @@ export const FACTIONS = {
       { id: "frotzling", name: "Frotzling Mob", cost: { food: 60, gold: 24 }, hp: 92, damage: 11, speed: 3.0, range: 1.1, description: "Cheap oversized squad" },
       { id: "bellyram", name: "Belly Ram Crew", cost: { food: 95, wood: 45, gold: 35 }, hp: 145, damage: 22, speed: 2.4, range: 1.2, description: "Slow siege formation" }
     ]
+  },
+
+  clockworkOrchard: {
+    id: "clockworkOrchard",
+    name: "Clockwork Orchard Assembly",
+    symbol: "⚙",
+    tagline: "Precision growers who treat orchards, workshops and formations as one carefully tuned machine.",
+    founder: "The First Gardener",
+    founderTitle: "Assembly Founder",
+    color: 0xa6d77d,
+    accent: 0xf1e39a,
+    terrainTint: 0xa9c88b,
+    traits: ["Gold +18%", "Wood +8%", "Smaller harder-hitting squads", "Structures cost more but endure"],
+    economy: { food: 0.92, wood: 1.08, stone: 0.95, gold: 1.18 },
+    military: { cost: 1.06, health: 0.90, damage: 1.14, speed: 1.06, squadSize: 4 },
+    building: { cost: 1.08, health: 1.12 },
+    starting: { food: 275, wood: 315, stone: 170, gold: 220, workforce: 19 },
+    special: "Precision Harvest: the Assembly fields fewer soldiers per formation, but each formation hits harder and moves with deliberate speed.",
+    buildings: [
+      { id: "gear-orchard", name: "Gear Orchard", role: "economy", cost: { wood: 135, stone: 35 }, income: { wood: 0.55, gold: 0.25 }, description: "Precision harvest & workshop income" },
+      { id: "pruning-hall", name: "Pruning Hall", role: "military", cost: { wood: 155, gold: 55 }, unlocks: "pruner", description: "Trains precise Assembly cohorts" },
+      { id: "signal-spire", name: "Signal Spire", role: "defense", cost: { wood: 90, stone: 110 }, defense: 22, description: "Expensive but strong territorial watch" }
+    ],
+    units: [
+      { id: "pruner", name: "Gearbound Pruners", cost: { food: 58, gold: 42 }, hp: 84, damage: 17, speed: 3.5, range: 1.35, description: "Small high-damage formation" },
+      { id: "orchard-runner", name: "Orchard Runners", cost: { food: 72, wood: 30, gold: 48 }, hp: 68, damage: 19, speed: 4.7, range: 1.55, description: "Fast precision strike formation" }
+    ]
   }
 };
 
