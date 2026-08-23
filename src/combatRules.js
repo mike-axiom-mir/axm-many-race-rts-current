@@ -1,4 +1,12 @@
 export const COMBAT_ROLES = {
+  legacy: {
+    id: "legacy",
+    name: "Legacy",
+    summary: "Preserved neutral combat profile for factions that predate the new role system.",
+    defaultArmor: 0,
+    defaultAttackInterval: 0.85,
+    bonuses: {}
+  },
   line: {
     id: "line",
     name: "Line",
@@ -35,17 +43,17 @@ export const COMBAT_ROLES = {
 };
 
 export function combatRoleDefinition(role) {
-  return COMBAT_ROLES[role] || COMBAT_ROLES.line;
+  return COMBAT_ROLES[role] || COMBAT_ROLES.legacy;
 }
 
 export function combatClassFor(entity) {
   if (!entity?.userData) return "unknown";
   if (entity.userData.type === "building" || entity.userData.type === "capital" || entity.userData.type === "workshop") return "structure";
-  return entity.userData.combatRole || (entity.userData.type === "founder" ? "line" : "line");
+  return entity.userData.combatRole || "legacy";
 }
 
 export function combatMultiplier(attacker, target) {
-  const attackerRole = combatRoleDefinition(attacker?.userData?.combatRole || "line");
+  const attackerRole = combatRoleDefinition(attacker?.userData?.combatRole || "legacy");
   const targetClass = combatClassFor(target);
   if (attackerRole.bonuses?.[targetClass]) return attackerRole.bonuses[targetClass];
   if (attackerRole.penalties?.[targetClass]) return attackerRole.penalties[targetClass];
@@ -60,7 +68,7 @@ export function preferredTargetWeight(attacker, target) {
 }
 
 export function resolvedCombatProfile(unitDef = {}) {
-  const role = combatRoleDefinition(unitDef.combat?.role || unitDef.role || "line");
+  const role = combatRoleDefinition(unitDef.combat?.role || unitDef.role || "legacy");
   return {
     role: role.id,
     armor: Math.max(0, Math.min(.65, Number(unitDef.combat?.armor ?? role.defaultArmor ?? 0))),
