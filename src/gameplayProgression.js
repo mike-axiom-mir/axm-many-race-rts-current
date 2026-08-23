@@ -47,7 +47,7 @@ export function availabilityText({ faction, unit, age = 0, buildings = [], ageNa
 export function trainingTimeForUnit(unit, faction) {
   if (Number.isFinite(unit?.trainTime)) return Math.max(2, Number(unit.trainTime));
   const rawCost = Object.values(unit?.cost || {}).reduce((sum, value) => sum + Number(value || 0), 0);
-  const squadSize = Number(faction?.military?.squadSize || 5);
+  const squadSize = Number(unit?.squadSize || faction?.military?.squadSize || 5);
   return Math.max(7, Math.min(16, 5.8 + rawCost / 34 + squadSize * .42));
 }
 
@@ -67,7 +67,21 @@ export function chooseEnemyUnit(faction, age, buildings = []) {
   const available = (faction?.units || []).filter(unit => unitAvailability({ faction, unit, age, buildings }).ready);
   if (!available.length) return null;
   if (available.length === 1) return available[0];
-  return Math.random() < .38 ? available[available.length - 1] : available[0];
+
+  // Keep the army readable and mixed: core formations remain common while later
+  // specialist formations appear often enough to matter without replacing the roster.
+  const weights = available.map((unit, index) => {
+    if (index === 0) return .46;
+    if (index === 1) return .34;
+    return .20 / Math.max(1, available.length - 2);
+  });
+  const total = weights.reduce((sum, value) => sum + value, 0);
+  let roll = Math.random() * total;
+  for (let index = 0; index < available.length; index++) {
+    roll -= weights[index];
+    if (roll <= 0) return available[index];
+  }
+  return available[available.length - 1];
 }
 
 export function chooseEnemyBuilding(faction, existing = []) {
