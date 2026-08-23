@@ -13,10 +13,33 @@ function clampScore(value) {
   return Math.max(-100, Math.min(100, Number(value || 0)));
 }
 
-export function signedMapDomination(director) {
+function teamFor(world, owner) {
+  return world?.__axmTeamByOwner?.[owner] ?? owner;
+}
+
+function sameTeam(world, ownerA, ownerB) {
+  if (!ownerA || !ownerB || ownerA === "neutral" || ownerB === "neutral") return false;
+  return teamFor(world, ownerA) === teamFor(world, ownerB);
+}
+
+function allegianceValue(world, siteOwner, perspectiveOwner) {
+  if (!siteOwner || siteOwner === "neutral") return 0;
+  return sameTeam(world, siteOwner, perspectiveOwner) ? 100 : -100;
+}
+
+function siteContributionFor(world, site, owner) {
+  const start = allegianceValue(world, site.owner, owner);
+  const captureOwner = site.captureOwner;
+  if (!captureOwner) return start;
+  const end = allegianceValue(world, captureOwner, owner);
+  const t = Math.max(0, Math.min(1, Number(site.progress || 0) / 100));
+  return start + (end - start) * t;
+}
+
+export function signedMapDomination(director, owner = "player") {
   const sites = director?.sites || [];
   if (!sites.length) return 0;
-  const total = sites.reduce((sum, site) => sum + clampScore(site.progress), 0);
+  const total = sites.reduce((sum, site) => sum + siteContributionFor(director.world, site, owner), 0);
   return clampScore(total / sites.length);
 }
 
@@ -33,23 +56,39 @@ export function dominationBonuses(score) {
   };
 }
 
-function samePrimaryFaction(world) {
+function primaryEconomyLedgerOwner(owner) {
+  return owner === "player" || owner === "enemy";
+}
+
+function primaryEconomyShared(world) {
   const factions = world?.__axmFactionByOwner || {};
   return Boolean(factions.player?.id && factions.player.id === factions.enemy?.id);
 }
 
-function buildState(world, signedPlayer) {
-  const mirroredFaction = samePrimaryFaction(world);
-  const player = dominationBonuses(signedPlayer);
-  const enemy = dominationBonuses(-signedPlayer);
-  player.economyAppliedPercent = mirroredFaction ? 0 : player.economyBonusPercent;
-  enemy.economyAppliedPercent = mirroredFaction ? 0 : enemy.economyBonusPercent;
-  player.economyAppliedMultiplier = 1 + player.economyAppliedPercent * DOMINATION_ECO_STEP_BONUS;
-  enemy.economyAppliedMultiplier = 1 + enemy.economyAppliedPercent * DOMINATION_ECO_STEP_BONUS;
+function activeOwners(world) {
+  const owners = new Set(["player", "enemy"]);
+  for (const owner of Object.keys(world?.__axmFactionByOwner || {})) owners.add(owner);
+  for (const entity of world?.entities || []) if (entity?.userData?.owner) owners.add(entity.userData.owner);
+  return [...owners].filter(owner => owner && owner !== "neutral");
+}
+
+function buildState(world, director = null) {
+  const mirroredPrimaryEconomy = primaryEconomyShared(world);
+  const byOwner = {};
+  for (const owner of activeOwners(world)) {
+    const data = dominationBonuses(director ? signedMapDomination(director, owner) : 0);
+    const hasEconomyLedger = primaryEconomyLedgerOwner(owner);
+    const blockedBySharedDefinition = mirroredPrimaryEconomy && hasEconomyLedger;
+    data.hasEconomyLedger = hasEconomyLedger;
+    data.economyBlockedBySharedDefinition = blockedBySharedDefinition;
+    data.economyAppliedPercent = hasEconomyLedger && !blockedBySharedDefinition ? data.economyBonusPercent : 0;
+    data.economyAppliedMultiplier = 1 + data.economyAppliedPercent * DOMINATION_ECO_STEP_BONUS;
+    byOwner[owner] = data;
+  }
   return {
-    signedPlayer: clampScore(signedPlayer),
-    mirroredFaction,
-    byOwner: { player, enemy }
+    signedPlayer: byOwner.player?.score || 0,
+    mirroredPrimaryEconomy,
+    byOwner
   };
 }
 
@@ -59,10 +98,11 @@ function formatSigned(value) {
   return `${rounded}%`;
 }
 
-function bonusText(data, mirrored = false) {
-  if (!data) return "Neutral";
+function bonusText(data) {
+  if (!data) return "0% • no bonus";
   if (data.score > 0) {
-    if (mirrored && data.economyBonusPercent > 0) return `${formatSigned(data.score)} • ECO guarded in mirror`;
+    if (!data.hasEconomyLedger && data.economyBonusPercent > 0) return `${formatSigned(data.score)} • ECO waits for ledger`;
+    if (data.economyBlockedBySharedDefinition && data.economyBonusPercent > 0) return `${formatSigned(data.score)} • ECO guarded in mirror`;
     return `${formatSigned(data.score)} • ECO +${data.economyAppliedPercent}%`;
   }
   if (data.score < 0) return `${formatSigned(data.score)} • ATTACK +${data.attackBonusPercent}%`;
@@ -96,19 +136,19 @@ function ensureHud(world) {
 function renderHud(world) {
   const root = ensureHud(world);
   if (!root) return;
-  const state = world.__axmMapDominationMomentum || buildState(world, 0);
+  const state = world.__axmMapDominationMomentum || buildState(world, null);
   const headline = root.querySelector("#mapDominationPercent");
   const player = root.querySelector("#mapDominationPlayer");
   const enemy = root.querySelector("#mapDominationEnemy");
-  if (headline) headline.textContent = formatSigned(state.signedPlayer);
-  if (player) player.textContent = bonusText(state.byOwner.player, state.mirroredFaction);
-  if (enemy) enemy.textContent = bonusText(state.byOwner.enemy, state.mirroredFaction);
+  if (headline) headline.textContent = formatSigned(state.byOwner.player?.score || 0);
+  if (player) player.textContent = bonusText(state.byOwner.player);
+  if (enemy) enemy.textContent = bonusText(state.byOwner.enemy);
 }
 
 function publishState(director) {
   const world = director?.world;
   if (!world) return null;
-  const state = buildState(world, signedMapDomination(director));
+  const state = buildState(world, director);
   world.__axmMapDominationMomentum = state;
   world.__axmDominationEconomyMultiplier = owner =>
     Number(world.__axmMapDominationMomentum?.byOwner?.[owner]?.economyAppliedMultiplier || 1);
@@ -132,7 +172,7 @@ function ownerActors(world, owner) {
 
 function applyEconomyMomentum(world) {
   const state = world.__axmMapDominationMomentum;
-  if (!state || state.mirroredFaction) return;
+  if (!state) return;
   for (const owner of ["player", "enemy"]) {
     const faction = world.__axmFactionByOwner?.[owner];
     const data = state.byOwner?.[owner];
@@ -145,7 +185,7 @@ function applyEconomyMomentum(world) {
 
 function applyAttackMomentum(world) {
   const state = world.__axmMapDominationMomentum;
-  for (const owner of ["player", "enemy"]) {
+  for (const owner of activeOwners(world)) {
     const data = state?.byOwner?.[owner] || dominationBonuses(0);
     for (const actor of ownerActors(world, owner)) {
       actor.userData.__axmDominationAttackBonus = data.attackBonusPercent;
@@ -161,7 +201,7 @@ function applyAttackMomentum(world) {
 
 MapDirector.prototype.reset = function dominationMomentumReset(map) {
   const result = previousMapReset.call(this, map);
-  this.world.__axmMapDominationMomentum = buildState(this.world, 0);
+  this.world.__axmMapDominationMomentum = buildState(this.world, this);
   this.world.__axmDominationEconomyMultiplier = () => 1;
   this.world.__axmDominationAttackMultiplier = () => 1;
   renderHud(this.world);
