@@ -21,9 +21,11 @@
 - Existing AXM `surfacePaint` map schema.
 - No high-ground combat-stat bonus.
 
-## Source-audit repair
+## Source-audit repairs
 
 The first cost-aware route version still used the old passability-only simplifier. Source review caught that it could shortcut across a slower surface after A* had selected a better painted detour. The simplifier was repaired to compare sampled travel cost and preserve a routed chain when the shortcut is materially slower.
+
+A second review corrected an overclaim in the overlap documentation: movement priority is deterministically last-authored, but transparent Three.js draw sorting is not claimed to use that exact priority.
 
 ## Explicit non-goals
 
@@ -51,5 +53,5 @@ Local/browser play remains unverified until Mike/local runs the merged build.
 6. Wall collisions still roll movement back correctly.
 7. Auto Scout inherits surface movement automatically.
 8. Cliff detours remain stable and do not jitter between surface choices.
-9. Surface overlaps match authored/render order.
+9. Surface overlaps apply deterministic last-authored movement priority.
 10. Performance remains acceptable with several formations moving at once.
