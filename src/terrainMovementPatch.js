@@ -13,10 +13,23 @@ function sameGoal(route, goal) {
 }
 
 function makeRoute(entity, goal) {
+  if (terrainSegmentWalkable(DEFAULT_MAP, entity.position, goal)) {
+    return {
+      goalX: goal.x,
+      goalZ: goal.z,
+      direct: true,
+      waypoints: [],
+      index: 0,
+      reachesGoal: true,
+      expanded: 0
+    };
+  }
+
   const plan = findTerrainRoute(DEFAULT_MAP, entity.position, goal);
   return {
     goalX: goal.x,
     goalZ: goal.z,
+    direct: Boolean(plan.direct),
     waypoints: plan.waypoints || [],
     index: 0,
     reachesGoal: Boolean(plan.reachesGoal),
@@ -31,16 +44,16 @@ RTSWorld.prototype.updateMovement = function terrainAwareMovement(entity, dt, ti
   }
 
   const finalTarget = data.target.clone();
-  if (terrainSegmentWalkable(DEFAULT_MAP, entity.position, finalTarget)) {
-    delete data.__axmTerrainRoute;
-    data.terrainBlocked = false;
-    return previousMovement.call(this, entity, dt, time);
-  }
-
   let route = data.__axmTerrainRoute;
   if (!sameGoal(route, finalTarget)) {
     route = makeRoute(entity, finalTarget);
     data.__axmTerrainRoute = route;
+  }
+
+  if (route.direct) {
+    data.terrainBlocked = false;
+    data.terrainRouteExpanded = 0;
+    return previousMovement.call(this, entity, dt, time);
   }
 
   while (route.index < route.waypoints.length && flatDistance(entity.position, route.waypoints[route.index]) < .78) {
