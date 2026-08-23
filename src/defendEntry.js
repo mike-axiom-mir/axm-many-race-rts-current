@@ -7,3 +7,4 @@ import "./defendWorkshop.js";
 import "./defendLifecyclePatch.js";
 import "./defendCoopSectorPatch.js";
 import "./defendMetricsPatch.js";
+import "./defendMetricsRepairCapturePatch.js";
