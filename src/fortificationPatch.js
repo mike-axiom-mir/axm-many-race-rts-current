@@ -9,8 +9,7 @@ const previousTick = RTSWorld.prototype.tick;
 
 function material(color, roughness=.88){return new THREE.MeshStandardMaterial({color,roughness,metalness:.04,flatShading:true});}
 function shadow(mesh){mesh.castShadow=true;mesh.receiveShadow=true;return mesh;}
-function sameTeam(world,a,b){if(a===b)return true;const teams=world.__axmTeamByOwner||{};return teams[a]!=null&&teams[b]!=null&&teams[a]===teams[b];}
-function ownerFaction(world,owner){return world.__axmFactionByOwner?.[owner]||null;}
+function sameTeam(world,a,b){if(a===b)return true;const teams=world?.__axmTeamByOwner||{};return teams[a]!=null&&teams[b]!=null&&teams[a]===teams[b];}
 
 function wallPalette(faction, enemy){
   if(enemy)return {body:0x6f3b42,dark:0x39252a,accent:0xd76f78};
@@ -21,35 +20,28 @@ function wallPalette(faction, enemy){
   return {body:faction?.color||0x75808b,dark:0x3c4650,accent:faction?.accent||0xdde7ed};
 }
 
-function clearGeneratedBuilding(building){
-  for(const child of building.children) child.visible=false;
-}
+function clearGeneratedBuilding(building){for(const child of building.children)child.visible=false;}
 
 function makeWallVisual(building,faction,enemy,width,depth){
   const p=wallPalette(faction,enemy);
   const body=shadow(new THREE.Mesh(new THREE.BoxGeometry(width,1.85,depth),material(p.body)));body.position.y=.95;building.add(body);
   const footing=shadow(new THREE.Mesh(new THREE.BoxGeometry(width+.25,.32,depth+.28),material(p.dark)));footing.position.y=.16;building.add(footing);
-  const blocks=5;
-  for(let i=0;i<blocks;i++){
-    const x=-width/2+(i+.5)*width/blocks;
-    const cap=shadow(new THREE.Mesh(new THREE.BoxGeometry(width/blocks*.68,.42,depth*1.08),material(p.accent)));
+  for(let i=0;i<5;i++){
+    const x=-width/2+(i+.5)*width/5;
+    const cap=shadow(new THREE.Mesh(new THREE.BoxGeometry(width/5*.68,.42,depth*1.08),material(p.accent)));
     cap.position.set(x,2.02,0);building.add(cap);
   }
 }
 
 function makeGateVisual(building,faction,enemy,width,depth){
-  const p=wallPalette(faction,enemy);
-  const pillarW=.78;
+  const p=wallPalette(faction,enemy),pillarW=.78;
   for(const x of [-width/2+pillarW/2,width/2-pillarW/2]){
     const pillar=shadow(new THREE.Mesh(new THREE.BoxGeometry(pillarW,2.75,depth*1.18),material(p.body)));pillar.position.set(x,1.38,0);building.add(pillar);
     const cap=shadow(new THREE.Mesh(new THREE.BoxGeometry(pillarW*1.2,.34,depth*1.32),material(p.accent)));cap.position.set(x,2.92,0);building.add(cap);
   }
   const lintel=shadow(new THREE.Mesh(new THREE.BoxGeometry(width-1.25,.48,depth),material(p.dark)));lintel.position.y=2.5;building.add(lintel);
   const door=shadow(new THREE.Mesh(new THREE.BoxGeometry(width-1.65,1.72,.18),material(p.dark)));door.position.y=1.08;building.add(door);
-  door.userData.gateDoor=true;
-  door.userData.closedY=1.08;
-  door.userData.openY=2.55;
-  building.userData.gateDoor=door;
+  door.userData.gateDoor=true;door.userData.closedY=1.08;door.userData.openY=2.55;building.userData.gateDoor=door;
 }
 
 function nearestFriendlyFortification(world,building){
@@ -63,41 +55,39 @@ function nearestFriendlyFortification(world,building){
   return best;
 }
 
-function orientFortification(world,building){
+function alignAndSnapFortification(world,building){
   const neighbor=nearestFriendlyFortification(world,building);
-  if(neighbor){building.rotation.y=neighbor.rotation.y;return;}
-  const capital=world.entities.find(entity=>entity.parent&&entity.userData.type==="capital"&&sameTeam(world,entity.userData.owner,building.userData.owner));
-  if(!capital)return;
-  const dx=building.position.x-capital.position.x;
-  const dz=building.position.z-capital.position.z;
-  building.rotation.y=Math.atan2(dx,dz)+Math.PI/2;
+  if(neighbor){
+    building.rotation.y=neighbor.rotation.y;
+    const ncfg=neighbor.userData.fortification;
+    const bcfg=building.userData.fortification;
+    const axis=new THREE.Vector3(Math.cos(neighbor.rotation.y),0,-Math.sin(neighbor.rotation.y)).normalize();
+    const desired=building.position.clone().sub(neighbor.position);
+    const sign=desired.dot(axis)>=0?1:-1;
+    const spacing=(Number(ncfg.width||5.4)+Number(bcfg.width||5.4))*.5+.12;
+    building.position.x=neighbor.position.x+axis.x*spacing*sign;
+    building.position.z=neighbor.position.z+axis.z*spacing*sign;
+  }else{
+    const capital=world.entities.find(entity=>entity.parent&&entity.userData.type==="capital"&&sameTeam(world,entity.userData.owner,building.userData.owner));
+    if(capital){
+      const dx=building.position.x-capital.position.x,dz=building.position.z-capital.position.z;
+      building.rotation.y=Math.atan2(dx,dz)+Math.PI/2;
+    }
+  }
+  building.position.y=flatHeightAt(DEFAULT_MAP,building.position.x,building.position.z);
 }
 
 function setupFortification(world,building,def,faction,enemy){
   const cfg=def?.fortification;
   if(!cfg)return building;
   clearGeneratedBuilding(building);
-  const width=Math.max(3.2,Number(cfg.width||5.4));
-  const depth=Math.max(.55,Number(cfg.depth||.85));
+  const width=Math.max(3.2,Number(cfg.width||5.4)),depth=Math.max(.55,Number(cfg.depth||.85));
   building.userData.fortification={kind:cfg.kind||def.role,width,depth,passFriendly:Boolean(cfg.passFriendly)};
   building.userData.radius=Math.max(2.1,width*.48);
   building.userData.visionRadius=def.role==="gate"?6.5:5.5;
   if(def.role==="gate")makeGateVisual(building,faction,enemy,width,depth);else makeWallVisual(building,faction,enemy,width,depth);
-  orientFortification(world,building);
+  alignAndSnapFortification(world,building);
   return building;
-}
-
-function insideFortification(point,entity,fort){
-  const cfg=fort.userData.fortification;
-  if(!cfg)return false;
-  if(cfg.passFriendly&&sameTeam(entity.__worldRef||null,entity.userData.owner,fort.userData.owner))return false;
-  const dx=point.x-fort.position.x;
-  const dz=point.z-fort.position.z;
-  const c=Math.cos(-fort.rotation.y),s=Math.sin(-fort.rotation.y);
-  const lx=dx*c-dz*s;
-  const lz=dx*s+dz*c;
-  const margin=Math.min(.72,Math.max(.28,Number(entity.userData.radius||.8)*.38));
-  return Math.abs(lx)<=cfg.width/2+margin&&Math.abs(lz)<=cfg.depth/2+margin;
 }
 
 function blockerFor(world,entity,point){
@@ -144,7 +134,7 @@ function animateGates(world,dt){
       return dx*dx+dz*dz<22;
     });
     const target=friendlyNear?door.userData.openY:door.userData.closedY;
-    door.position.y+= (target-door.position.y)*Math.min(1,dt*6.5);
+    door.position.y+=(target-door.position.y)*Math.min(1,dt*6.5);
   }
 }
 
