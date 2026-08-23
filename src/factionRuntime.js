@@ -1,5 +1,12 @@
 import * as THREE from "three";
 
+const PRISMKIN_PHASE_SECONDS = 14;
+const PRISMKIN_PHASES = [
+  { id: "drift", label: "Drift", color: 0x7ff0e8 },
+  { id: "focus", label: "Focus", color: 0xffd36f },
+  { id: "mend", label: "Mend", color: 0xbd9cff }
+];
+
 function ensureBaseStats(entity) {
   const data = entity.userData;
   if (data.__axmBaseDamage === undefined) data.__axmBaseDamage = data.damage || 0;
@@ -66,6 +73,7 @@ export class FactionRuntime {
     if (faction.id === "ironvale") this.applyIronvale(owner);
     else if (faction.id === "greenwake") this.applyGreenwake(owner, dt);
     else if (faction.id === "ashwind") this.applyAshwind(owner);
+    else if (faction.id === "prismkin") this.applyPrismkin(owner, dt, time);
     else if (faction.id === "northpole") this.applyNorthpole(owner, faction, time);
     else if (faction.id === "suitcase") this.applySuitcase(owner);
     else if (faction.id === "fatfrotz") this.applyFatfrotz(owner);
@@ -109,6 +117,53 @@ export class FactionRuntime {
       squad.userData.speed = squad.userData.__axmBaseSpeed * 1.08;
       squad.userData.__axmFactionState = "Forward Momentum";
     }
+  }
+
+  applyPrismkin(owner, dt, time) {
+    const phaseIndex = Math.floor(time / PRISMKIN_PHASE_SECONDS) % PRISMKIN_PHASES.length;
+    const phase = PRISMKIN_PHASES[phaseIndex];
+    const remaining = Math.max(1, Math.ceil(PRISMKIN_PHASE_SECONDS - (time % PRISMKIN_PHASE_SECONDS)));
+    const formations = activeSquads(this.world, owner);
+    const founder = activeFounder(this.world, owner);
+    const actors = founder ? [...formations, founder] : formations;
+
+    for (const entity of actors) {
+      this.ensurePrismkinRing(entity, phase.color);
+      const ring = entity.userData.__axmPrismRing;
+      ring.material.color.setHex(phase.color);
+      ring.material.opacity = .18 + Math.sin(time * 3.4 + (entity.userData.phase || 0)) * .04;
+      const pulse = 1 + Math.sin(time * 3.4 + (entity.userData.phase || 0)) * .055;
+      ring.scale.setScalar(pulse);
+      entity.userData.__axmFactionState = `Resonance: ${phase.label} • ${remaining}s`;
+    }
+
+    for (const squad of formations) {
+      if (phase.id === "drift") {
+        squad.userData.speed = squad.userData.__axmBaseSpeed * 1.18;
+      } else if (phase.id === "focus") {
+        squad.userData.damage = squad.userData.__axmBaseDamage * 1.14;
+        squad.userData.range = squad.userData.__axmBaseRange + .35;
+      } else if (phase.id === "mend") {
+        squad.userData.speed = squad.userData.__axmBaseSpeed * .94;
+        const maxHp = Number(squad.userData.maxHp || squad.userData.hp || 0);
+        if (maxHp > 0 && squad.userData.hp < maxHp) {
+          squad.userData.hp = Math.min(maxHp, squad.userData.hp + 2.4 * dt);
+        }
+      }
+    }
+  }
+
+  ensurePrismkinRing(entity, color) {
+    if (entity.userData.__axmPrismRing) return;
+    const ring = new THREE.Mesh(
+      new THREE.TorusGeometry(entity.userData.type === "founder" ? 1.75 : 1.48, .045, 6, 34),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: .2, depthWrite: false })
+    );
+    ring.rotation.x = Math.PI / 2;
+    ring.position.y = .08;
+    ring.renderOrder = 3;
+    entity.add(ring);
+    entity.userData.__axmPrismRing = ring;
   }
 
   applyNorthpole(owner, faction, time) {

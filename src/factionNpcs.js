@@ -1,7 +1,9 @@
 import { STARTER_FACTION_NPCS } from "./starterFactionNpcs.js";
+import { WILDCARD_FACTION_NPCS } from "./wildcardFactionNpc.js";
 
 export const FACTION_NPCS = {
   ...STARTER_FACTION_NPCS,
+  ...WILDCARD_FACTION_NPCS,
 
   northpole: {
     id: "npc-northpole-steward",
