@@ -5,9 +5,11 @@ function pointKey(point) {
 }
 
 function activeStarts(map) {
+  const runtime = Array.isArray(map?.runtimeStarts) && map.runtimeStarts.length
+    ? map.runtimeStarts
+    : (Array.isArray(map?.playerStarts) ? map.playerStarts : []);
   const raw = [
-    ...(Array.isArray(map?.runtimeStarts) ? map.runtimeStarts : []),
-    ...(Array.isArray(map?.playerStarts) ? map.playerStarts : []),
+    ...runtime,
     map?.playerStart,
     map?.enemyStart
   ].filter(point => Array.isArray(point) && point.length >= 3);
