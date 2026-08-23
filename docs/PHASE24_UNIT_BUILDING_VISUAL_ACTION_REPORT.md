@@ -31,6 +31,12 @@ The import/wrapper chain was inspected specifically because Wall/Gate constructi
 
 Fog of War and multi-seat spawning were also inspected. Both wrap and call the previous spawn functions, so importing Phase 24 before them keeps the visual additions in those later execution paths.
 
+### Source-audit repair
+
+The first Phase-24 draft identified formation members with `child.isGroup`. At this point in the existing visual chain, formations can also contain group-level props such as siege rams, orbit pivots and other animated attachments. That broad filter could have decorated a prop as if it were a soldier.
+
+The member filter was tightened before PR creation to require the original soldier `walkParts` marker. This keeps role/faction body detail on actual formation members while leaving existing group-level props untouched.
+
 ## Explicit non-goals
 
 - No balance changes.
