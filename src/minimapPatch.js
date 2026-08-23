@@ -51,15 +51,16 @@ function drawTerrain(ctx, width, height) {
   }
 }
 
-function drawEntity(ctx, entity, width, height) {
+function drawEntity(ctx, world, entity, width, height) {
   const data = entity.userData;
   if (!entity.parent || data.hp <= 0 || !data.owner) return;
+  if (world.__axmFogSystem && !world.__axmFogSystem.isEntityVisibleToPlayer(entity)) return;
   const x = toMapX(entity.position.x, width), y = toMapY(entity.position.z, height);
   ctx.fillStyle = OWNER_COLORS[data.owner] || "#d8e2e8";
   if (data.type === "capital") { ctx.fillRect(x - 6, y - 6, 12, 12); ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.strokeRect(x - 7, y - 7, 14, 14); }
   else if (data.type === "building") ctx.fillRect(x - 4, y - 4, 8, 8);
   else if (data.type === "founder") { ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#fff6c9"; ctx.stroke(); }
-  else if (data.type === "squad") { ctx.beginPath(); ctx.arc(x, y, 3.2, 0, Math.PI * 2); ctx.fill(); }
+  else if (data.type === "squad") { ctx.beginPath(); ctx.arc(x, y, data.isScout ? 4 : 3.2, 0, Math.PI * 2); ctx.fill(); }
 }
 
 function drawCamera(ctx, world, width, height) {
@@ -70,7 +71,11 @@ function drawCamera(ctx, world, width, height) {
 function drawMinimap(world, time) {
   const mini = ensureMinimap(world); if (time - mini.lastDraw < .08) return; mini.lastDraw = time;
   const { ctx, canvas } = mini, width = canvas.width, height = canvas.height;
-  ctx.clearRect(0, 0, width, height); drawTerrain(ctx, width, height); for (const entity of world.entities) drawEntity(ctx, entity, width, height); drawCamera(ctx, world, width, height);
+  ctx.clearRect(0, 0, width, height);
+  drawTerrain(ctx, width, height);
+  for (const entity of world.entities) drawEntity(ctx, world, entity, width, height);
+  world.__axmFogSystem?.drawMiniFog(ctx, width, height);
+  drawCamera(ctx, world, width, height);
 }
 
 RTSWorld.prototype.tick = function minimapTick(time, dt) { const result = originalTick.call(this, time, dt); drawMinimap(this, time); return result; };
