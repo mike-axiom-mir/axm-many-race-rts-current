@@ -91,25 +91,32 @@ export function activeSeats(lobby) {
   return normalizeLobby(lobby).seats.filter(seat => seat.controller !== "closed");
 }
 
+export function playerControlledSeats(lobby) {
+  return normalizeLobby(lobby).seats.filter(seat => seat.controller === "human" || seat.controller === "connected-ai");
+}
+
 export function validateLobby(lobby) {
   const normalized = normalizeLobby(lobby);
   const active = activeSeats(normalized);
+  const players = playerControlledSeats(normalized);
   const errors = [];
   const warnings = [];
 
-  if (active.length < 1) errors.push("At least one active seat is required.");
-  if (active.length > CURRENT_MAX_SEATS) errors.push(`Current runtime shell supports at most ${CURRENT_MAX_SEATS} seats.`);
-  if (active.length === 1) warnings.push("One-seat mode is useful for sandbox/testing, but there is no opposing seat unless the battle map spawns one.");
-  if (new Set(active.map(seat => seat.team)).size < 2 && active.length > 1) warnings.push("All active seats are on the same team.");
+  if (players.length < 1 && normalized.mode === "skirmish") errors.push("Skirmish needs at least one Human or Connected-AI player seat.");
+  if (players.length > CURRENT_MAX_SEATS) errors.push(`Current lobby supports at most ${CURRENT_MAX_SEATS} player-controlled seats.`);
+  if (active.length > CURRENT_MAX_SEATS) errors.push(`Current runtime shell supports at most ${CURRENT_MAX_SEATS} civilizations.`);
+  if (normalized.mode === "skirmish" && active.length < 2) errors.push("Current skirmish runtime needs at least two active civilizations; use Faction AI to fill an opponent seat for single-player.");
+  if (normalized.mode === "skirmish" && normalized.seats[1]?.controller === "closed") errors.push("Seat 2 must currently remain active because the stable flat runtime still uses it as the primary opposing-side adapter.");
+  if (new Set(active.map(seat => seat.team)).size < 2 && active.length > 1) warnings.push("All active civilizations are on the same team, so normal elimination victory may never trigger.");
 
   for (const seat of active) {
-    if (!seat.factionId) warnings.push(`${seat.label || seat.id} has no faction selected yet.`);
+    if (!seat.factionId) warnings.push(`${seat.label || seat.id} has no faction selected yet; a runtime fallback faction will be used.`);
     if (seat.controller === "connected-ai" && !seat.connectedAI?.sameInformationGate) {
       errors.push(`${seat.label || seat.id}: Connected AI seats must use the normal player information gate.`);
     }
   }
 
-  return { valid: errors.length === 0, errors, warnings, lobby: normalized };
+  return { valid: errors.length === 0, errors, warnings, lobby: normalized, playerCount: players.length, civilizationCount: active.length };
 }
 
 export function saveLobby(lobby) {
