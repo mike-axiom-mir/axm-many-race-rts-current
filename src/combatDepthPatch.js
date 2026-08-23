@@ -35,6 +35,43 @@ function selectCombatTarget(world, attacker, maxDistance = Infinity) {
   return best ? { entity: best, distance: bestDistance } : null;
 }
 
+function applyFormationShape(group, role) {
+  const members = group.children.filter(child => child?.isGroup);
+  if (!members.length) return;
+
+  if (role === "ranged") {
+    const spacing = .92;
+    members.forEach((member, index) => {
+      const row = Math.floor(index / 4);
+      const inRow = Math.min(4, members.length - row * 4);
+      const col = index % 4;
+      member.position.x = (col - (inRow - 1) / 2) * spacing;
+      member.position.z = (row - .35) * .92;
+    });
+  } else if (role === "mobile") {
+    members.forEach((member, index) => {
+      if (index === 0) member.position.set(0, 0, -.9);
+      else {
+        const row = Math.ceil(index / 2);
+        const side = index % 2 ? -1 : 1;
+        member.position.set(side * row * .58, 0, -.9 + row * .72);
+      }
+    });
+  } else if (role === "siege") {
+    members.forEach((member, index) => {
+      member.position.set((index - (members.length - 1) / 2) * .82, 0, 0);
+      member.scale.multiplyScalar(1.08);
+    });
+  } else {
+    members.forEach((member, index) => {
+      const row = Math.floor(index / 3);
+      const col = index % 3;
+      member.position.x = (col - 1) * .72;
+      member.position.z = (row - .45) * .76;
+    });
+  }
+}
+
 RTSWorld.prototype.spawnSquad = function combatDepthSquad(unitDef, faction, pos, enemy = false, countOverride = null) {
   const count = countOverride || unitDef?.squadSize || null;
   const group = originalSpawnSquad.call(this, unitDef, faction, pos, enemy, count);
@@ -44,6 +81,7 @@ RTSWorld.prototype.spawnSquad = function combatDepthSquad(unitDef, faction, pos,
   group.userData.attackInterval = profile.attackInterval;
   group.userData.combatSummary = profile.description;
   group.userData.unitDef = unitDef?.id || null;
+  applyFormationShape(group, profile.role);
   return group;
 };
 
