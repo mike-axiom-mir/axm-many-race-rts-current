@@ -28,4 +28,5 @@ import "./rainWeatherPatch.js";
 import "./combatWaypointEconomyTagPatch.js";
 import "./combatWaypointPatch.js";
 import "./combatWaypointInteropPatch.js";
+import "./mapDominationMomentumPatch.js";
 import "./game.js";
