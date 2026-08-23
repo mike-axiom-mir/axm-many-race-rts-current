@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="theme-color" content="#060d15" />
+  <title>AXM Many-Race RTS — Globe Conquest</title>
+  <link rel="stylesheet" href="globe.css" />
+</head>
+<body>
+  <div id="globeApp">
+    <div id="viewport"></div>
+    <header class="topbar glass">
+      <div class="brand"><a href="./index.html" class="mark">AXM</a><div><h1>Globe Conquest</h1><p id="mapTitle">Crownworld • true spherical RTS adapter</p></div></div>
+      <div class="actions"><a href="./scenario.html">SCENARIO STUDIO</a><button id="loadMapBtn">Load globe map</button><button id="restartBtn">Restart</button></div>
+    </header>
+
+    <section id="startScreen" class="start-card glass">
+      <div class="eyebrow">PLANETARY SKIRMISH</div>
+      <h2>Choose a faction</h2>
+      <p>Armies move along the planet surface using great-circle paths. Rotate the world to inspect the far side; conquer strategic sites to feed your macro economy.</p>
+      <div id="factionCards" class="faction-cards"></div>
+    </section>
+
+    <aside id="leftHud" class="left-hud glass hidden">
+      <div class="eyebrow">YOUR CIVILIZATION</div>
+      <h2 id="factionName"></h2>
+      <p id="factionSpecial" class="muted"></p>
+      <div id="resources" class="resources"></div>
+
+      <div class="section-title">Macro allocation</div>
+      <div id="allocation" class="allocation"></div>
+
+      <div class="section-title">Planetary army</div>
+      <div id="trainButtons" class="stack"></div>
+      <div class="section-title">Progression</div>
+      <button id="ageBtn" class="wide"></button>
+    </aside>
+
+    <aside id="rightHud" class="right-hud glass hidden">
+      <div class="section-title">Formation doctrine</div>
+      <div class="stack">
+        <button data-command="move" class="primary">Move on globe</button>
+        <button data-command="site">Secure next site</button>
+        <button data-command="attack">Cross-world assault</button>
+        <button data-command="defend">Defend capital</button>
+      </div>
+      <div class="section-title">Planetary control</div>
+      <div id="siteList" class="sites"></div>
+      <div class="section-title">Battle state</div>
+      <div id="battleState" class="state"></div>
+      <p class="controls">Drag planet to rotate • wheel/pinch to zoom • choose “Move on globe” then tap anywhere on the planet.</p>
+    </aside>
+
+    <div id="toast" class="toast hidden"></div>
+    <div id="moveHint" class="move-hint hidden">Tap the planet to move your formations there</div>
+    <input id="mapFile" type="file" accept="application/json,.json" hidden />
+  </div>
+
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}</script>
+  <script type="module" src="src/globeGame.js"></script>
+</body>
+</html>
