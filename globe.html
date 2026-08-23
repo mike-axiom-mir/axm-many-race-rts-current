@@ -27,10 +27,8 @@
       <h2 id="factionName"></h2>
       <p id="factionSpecial" class="muted"></p>
       <div id="resources" class="resources"></div>
-
       <div class="section-title">Macro allocation</div>
       <div id="allocation" class="allocation"></div>
-
       <div class="section-title">Planetary army</div>
       <div id="trainButtons" class="stack"></div>
       <div class="section-title">Progression</div>
@@ -58,6 +56,9 @@
   </div>
 
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}</script>
-  <script type="module" src="src/globeGame.js"></script>
+  <script type="module">
+    import "./src/globeSurfacePatch.js";
+    import "./src/globeGame.js";
+  </script>
 </body>
 </html>
