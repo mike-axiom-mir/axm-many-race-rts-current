@@ -36,6 +36,7 @@ function selectCombatTarget(world, attacker, maxDistance = Infinity) {
 }
 
 function applyFormationShape(group, role) {
+  if (role === "legacy") return;
   const members = group.children.filter(child => child?.isGroup);
   if (!members.length) return;
 
@@ -126,7 +127,7 @@ RTSWorld.prototype.updateCombat = function roleAwareCombat(entity, dt) {
     if (data.cooldown > 0) return;
     const roleMult = combatMultiplier(entity, contact.entity);
     const armorMult = 1 - targetArmor(contact.entity);
-    const variance = .78 + Math.random() * .14;
+    const variance = data.combatRole === "legacy" ? (.72 + Math.random() * .20) : (.78 + Math.random() * .14);
     const hit = Math.max(1, Number(data.damage || 0) * roleMult * armorMult * variance);
     contact.entity.userData.hp -= hit;
     data.cooldown = Math.max(.35, Number(data.attackInterval || .85));
