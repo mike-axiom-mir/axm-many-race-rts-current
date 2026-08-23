@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>AXM Many-Race RTS — Macro Prototype</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div>
+        <h1>AXM Many-Race RTS</h1>
+        <p>Age-of-Empires-like progression, macro-first control, highly asymmetric factions.</p>
+      </div>
+      <div id="phaseBadge" class="badge">FACTION SELECT</div>
+    </header>
+
+    <main class="layout">
+      <section class="game-card">
+        <canvas id="game" width="1280" height="720" aria-label="RTS battlefield"></canvas>
+        <div id="toast" class="toast" hidden></div>
+      </section>
+
+      <aside class="sidebar">
+        <section id="factionSelect" class="panel">
+          <h2>Choose a faction</h2>
+          <p class="muted">The game is built data-first so this roster can grow into dozens of genuinely different factions.</p>
+          <div id="factionCards" class="faction-cards"></div>
+        </section>
+
+        <section id="hud" class="panel" hidden>
+          <div class="section-head">
+            <div>
+              <h2 id="factionName">Faction</h2>
+              <p id="factionTagline" class="muted"></p>
+            </div>
+            <button id="restartBtn" class="ghost">Restart</button>
+          </div>
+
+          <div id="resources" class="resource-grid"></div>
+
+          <h3>Macro economy</h3>
+          <p class="muted small">Shift workforce priorities. No villager babysitting.</p>
+          <div id="allocation" class="allocation"></div>
+
+          <h3>Build districts</h3>
+          <div id="buildButtons" class="button-grid"></div>
+
+          <h3>Raise squads</h3>
+          <div id="unitButtons" class="button-grid"></div>
+
+          <h3>Research</h3>
+          <div id="upgradeButtons" class="upgrade-list"></div>
+
+          <h3>Army command</h3>
+          <div class="command-row">
+            <button id="rallyHomeBtn">Rally home</button>
+            <button id="rallyCenterBtn">Contest center</button>
+            <button id="attackBtn" class="danger">Attack enemy</button>
+          </div>
+
+          <div id="status" class="status"></div>
+        </section>
+      </aside>
+    </main>
+
+    <footer>
+      <span>Phase 1: playable browser prototype • deterministic local simulation • no dependencies</span>
+    </footer>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
