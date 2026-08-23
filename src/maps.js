@@ -1,5 +1,6 @@
 import { SKIRMISH_MAP_PACK } from "./skirmishMapPack.js";
 import { applyMapVisualPresets } from "./mapVisualPresets.js";
+import { applyTerrainPassabilityPresets } from "./terrainPassabilityPresets.js";
 
 export const MAPS = {
   foundersCrossing: {
@@ -52,6 +53,7 @@ export const MAPS = {
 };
 
 applyMapVisualPresets(MAPS);
+applyTerrainPassabilityPresets(MAPS);
 
 // Preset authoring treats 0° as north/south. Plane strips are x-axis native,
 // so convert the built-in preset data once when the registry is constructed.
