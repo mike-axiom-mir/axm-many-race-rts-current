@@ -1,5 +1,6 @@
 import { ATLAS_TYPES, registerAtlasEntries } from "./atlasRegistry.js";
 import { DEFEND_ATLAS_ENTRIES, DEFEND_UPGRADES } from "./defendConfig.js";
+import { SKIRMISH_UPGRADE_ATLAS_ENTRIES } from "./skirmishUpgradeAtlas.js";
 import "./dominationAtlas.js";
 
 if (!ATLAS_TYPES.some(type => type.id === "upgrade")) {
@@ -19,5 +20,6 @@ registerAtlasEntries([
     tags: ["defend-workshop", "wave-upgrade", upgrade.id],
     stats: Object.fromEntries(Object.entries(upgrade.effect || {}).map(([key, value]) => [key, value])),
     source: "builtin-defend-workshop"
-  }))
+  })),
+  ...SKIRMISH_UPGRADE_ATLAS_ENTRIES
 ]);
