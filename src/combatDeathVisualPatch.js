@@ -60,6 +60,7 @@ function materialList(root) {
 
 function setRootOpacity(root, alpha) {
   for (const material of materialList(root)) {
+    material.userData ||= {};
     if (material.userData.__axmBaseOpacity === undefined) {
       material.userData.__axmBaseOpacity = Number(material.opacity ?? 1);
     }
@@ -102,7 +103,7 @@ function restoreAttackVisual(entity) {
   for (const entry of attack.members || []) {
     const member = entry.member;
     if (!member) continue;
-    member.position.set(entry.position.x, entry.position.y, entry.position.z);
+    if (!entry.rootEntity) member.position.copy(entry.position);
     member.rotation.x = entry.rotationX;
     member.rotation.z = entry.rotationZ;
   }
@@ -116,6 +117,7 @@ function triggerAttackVisual(entity) {
   const duration = role === "siege" ? .46 : role === "ranged" ? .34 : role === "mobile" ? .25 : .30;
   const members = attackMembers(entity).map(member => ({
     member,
+    rootEntity: member === entity,
     position: member.position.clone(),
     rotationX: member.rotation.x,
     rotationZ: member.rotation.z
@@ -134,23 +136,25 @@ function animateAttackVisual(entity, dt) {
     const entry = attack.members[index];
     const member = entry.member;
     if (!member) continue;
-    member.position.set(entry.position.x, entry.position.y, entry.position.z);
+    if (!entry.rootEntity) member.position.copy(entry.position);
     member.rotation.x = entry.rotationX;
     member.rotation.z = entry.rotationZ;
 
     if (attack.role === "ranged") {
-      member.position.z = entry.position.z + .07 * envelope;
+      if (!entry.rootEntity) member.position.z = entry.position.z + .07 * envelope;
       member.rotation.x = entry.rotationX + .10 * envelope;
     } else if (attack.role === "mobile") {
-      member.position.z = entry.position.z - .22 * envelope;
-      member.position.y = entry.position.y + .07 * envelope;
+      if (!entry.rootEntity) {
+        member.position.z = entry.position.z - .22 * envelope;
+        member.position.y = entry.position.y + .07 * envelope;
+      }
       member.rotation.x = entry.rotationX - .08 * envelope;
     } else if (attack.role === "siege") {
-      member.position.z = entry.position.z - .08 * envelope;
+      if (!entry.rootEntity) member.position.z = entry.position.z - .08 * envelope;
       member.rotation.x = entry.rotationX - .13 * envelope;
       member.rotation.z = entry.rotationZ + (index % 2 ? -.04 : .04) * envelope;
     } else {
-      member.position.z = entry.position.z - .16 * envelope;
+      if (!entry.rootEntity) member.position.z = entry.position.z - .16 * envelope;
       member.rotation.x = entry.rotationX - .18 * envelope;
     }
 
@@ -231,9 +235,7 @@ function prepareUnitDeath(world, entity) {
     root: entity,
     age: 0,
     duration: entity.userData.type === "founder" ? 2.8 : 2.3,
-    members,
-    basePosition: entity.position.clone(),
-    baseRotationZ: entity.rotation.z
+    members
   });
 }
 
@@ -355,9 +357,6 @@ function updateFx(world, time, dt) {
         member.position.set(memberEntry.position.x + memberEntry.direction * .10 * fall, memberEntry.position.y - .12 * fall, memberEntry.position.z);
         member.rotation.x = memberEntry.rotationX + .12 * fall;
         member.rotation.z = memberEntry.rotationZ + memberEntry.direction * 1.34 * fall;
-      }
-      if (entry.root.userData.type === "founder" && !entry.members.length) {
-        entry.root.rotation.z = entry.baseRotationZ + 1.30 * easeOut(progress * 1.8);
       }
       const fade = progress < .55 ? 1 : 1 - (progress - .55) / .45;
       setRootOpacity(entry.root, fade);
