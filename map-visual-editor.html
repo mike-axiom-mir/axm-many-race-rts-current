@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="theme-color" content="#071019" />
+  <title>AXM Many-Race RTS — Map Visual Layer</title>
+  <link rel="stylesheet" href="map-visual-editor.css" />
+</head>
+<body>
+  <header class="topbar glass">
+    <div class="brand">
+      <a href="./index.html" class="brand-mark">AXM</a>
+      <div><h1>Map Builder — Visual Layer</h1><p>Paint terrain • place/scatter scenery • preview the same low-poly visual language used by Skirmish</p></div>
+    </div>
+    <div class="top-actions">
+      <a href="./builder.html">Geography Editor</a>
+      <a href="./scenario.html">Scenario Studio</a>
+      <button id="importBtn">Import JSON</button>
+      <button id="exportBtn" class="primary">Export JSON</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel glass left">
+      <section>
+        <div class="eyebrow">MAP SOURCE</div>
+        <div class="section-title">Load built-in map</div>
+        <label>Map<select id="builtinMap"></select></label>
+        <button id="loadBuiltin" class="wide">Load selected built-in</button>
+        <p class="hint">This mode edits the same AXM map JSON as the Geography Editor. Imported/custom flat maps work too.</p>
+      </section>
+
+      <section>
+        <div class="section-title">Atmosphere</div>
+        <div class="row2">
+          <label>Ground<input id="terrainTint" type="color" value="#75985f" /></label>
+          <label>Sky<input id="skyTint" type="color" value="#8eb4c4" /></label>
+        </div>
+        <div class="row2">
+          <label>Fog<input id="fogTint" type="color" value="#8eb4c4" /></label>
+          <label>Fog density<input id="fogDensity" type="number" min="0" max="0.04" step="0.001" value="0.010" /></label>
+        </div>
+        <label><span>Procedural background scenery</span><input id="proceduralScenery" type="checkbox" /></label>
+        <label><span>Legacy crossing roads</span><input id="legacyRoads" type="checkbox" /></label>
+        <label><span>Legacy center monument</span><input id="legacyCenterpiece" type="checkbox" /></label>
+      </section>
+
+      <section>
+        <div class="section-title">Placement tools</div>
+        <div class="tools" id="tools">
+          <button data-tool="select" class="active">↖ Select</button>
+          <button data-tool="decoration">✦ Decoration</button>
+          <button data-tool="surface">▦ Paint</button>
+          <button data-tool="terrain">▲ Terrain</button>
+          <button data-tool="erase">× Erase</button>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-title">New decoration defaults</div>
+        <label>Asset<select id="decorationAsset"></select></label>
+        <div class="row2"><label>Scale<input id="decorationScale" type="number" min="0.1" max="8" step="0.1" value="1" /></label><label>Rotation<input id="decorationRotation" type="number" step="5" value="0" /></label></div>
+        <div class="row2"><label>Scatter count<input id="scatterCount" type="number" min="1" max="48" value="1" /></label><label>Scatter radius<input id="scatterRadius" type="number" min="0" max="30" step="0.5" value="0" /></label></div>
+      </section>
+
+      <section>
+        <div class="section-title">New paint defaults</div>
+        <label>Surface<select id="surfaceSkin"></select></label>
+        <div class="row2"><label>Shape<select id="surfaceShape"><option value="circle">Circle</option><option value="strip">Strip / road / river</option></select></label><label>Opacity<input id="surfaceOpacity" type="number" min="0.08" max="0.92" step="0.05" value="0.62" /></label></div>
+        <div class="row2"><label>Radius<input id="surfaceRadius" type="number" min="0.5" max="40" step="0.5" value="6" /></label><label>Rotation<input id="surfaceRotation" type="number" step="5" value="0" /></label></div>
+        <div class="row2"><label>Strip length<input id="surfaceLength" type="number" min="1" max="120" step="1" value="24" /></label><label>Strip width<input id="surfaceWidth" type="number" min="0.5" max="30" step="0.5" value="4" /></label></div>
+      </section>
+
+      <section>
+        <div class="section-title">New terrain defaults</div>
+        <div class="row2"><label>Kind<select id="terrainKind"><option value="hill">Hill</option><option value="rough">Rough</option><option value="water">Basin</option><option value="crater">Crater</option><option value="forest">Forest floor rise</option></select></label><label>Radius<input id="terrainRadius" type="number" min="1" max="40" step="0.5" value="8" /></label></div>
+        <label>Strength<input id="terrainStrength" type="number" min="0.1" max="4" step="0.1" value="1" /></label>
+      </section>
+    </aside>
+
+    <section class="viewport-wrap">
+      <div id="viewport" class="viewport"></div>
+      <div class="badge glass"><b id="mapName">Map</b><br><span id="coords">x 0 · z 0</span></div>
+      <div id="status" class="status glass">Select a visual tool, then click the battlefield.</div>
+    </section>
+
+    <aside class="panel glass right">
+      <section>
+        <div class="eyebrow">VISUAL CONTENT</div>
+        <div class="section-title"><span id="objectCount">0 visual objects</span></div>
+        <div id="objectList" class="object-list"></div>
+      </section>
+
+      <section id="inspector" class="hidden">
+        <div class="section-title">Inspector</div>
+        <div id="inspectorBody"></div>
+        <button id="deleteSelected" class="wide danger">Delete selected</button>
+      </section>
+
+      <section>
+        <div class="section-title">Map state</div>
+        <div id="validation" class="validation"></div>
+        <div class="preview-note">Visual scenery is currently cosmetic in flat Skirmish: formations do not path around trees/ruins yet. Terrain paint can communicate roads/water/hazard language; movement effects remain owned by the map/runtime rules layer.</div>
+      </section>
+
+      <section>
+        <button id="undoBtn" class="wide">↶ Undo visual edit</button>
+        <button id="copyBtn" class="wide">Copy map JSON</button>
+        <button id="clearVisuals" class="wide danger">Clear visual layer</button>
+      </section>
+    </aside>
+  </main>
+
+  <input id="fileInput" type="file" accept="application/json,.json" hidden />
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}</script>
+  <script type="module" src="src/mapVisualEditor.js"></script>
+</body>
+</html>
