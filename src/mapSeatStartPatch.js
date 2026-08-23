@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { RTSWorld } from "./world.js";
 import { DEFAULT_MAP } from "./maps.js";
 import { currentLiveSeatCount, runtimeMapStarts } from "./runtimeMapStarts.js";
+import { flatHeightAt } from "./mapVisuals.js";
 
 const previousTick = RTSWorld.prototype.tick;
 
@@ -21,6 +22,7 @@ function translateOwner(world, owner, desired) {
   for (const entity of world.entities) {
     if (!entity.parent || entity.userData.owner !== owner) continue;
     entity.position.add(delta);
+    entity.position.y = flatHeightAt(DEFAULT_MAP, entity.position.x, entity.position.z);
     if (entity.userData.target?.isVector3) entity.userData.target.add(delta);
   }
   return true;

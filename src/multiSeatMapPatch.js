@@ -23,13 +23,14 @@ function sameTeam(world, ownerA, ownerB) {
 }
 
 function presenceAtSite(world, site) {
-  const point = new THREE.Vector3(site.def.position[0], 0, site.def.position[2]);
+  const sx = Number(site.def.position[0] || 0);
+  const sz = Number(site.def.position[2] || 0);
   const counts = new Map();
   for (const entity of world.entities) {
     if (!entity.parent || entity.userData.hp <= 0) continue;
     if (entity.userData.type !== "squad" && entity.userData.type !== "founder") continue;
     const owner = entity.userData.owner;
-    if (!owner || entity.position.distanceTo(point) > site.def.radius) continue;
+    if (!owner || Math.hypot(entity.position.x - sx, entity.position.z - sz) > site.def.radius) continue;
     counts.set(owner, (counts.get(owner) || 0) + 1);
   }
   return counts;
@@ -91,5 +92,5 @@ MapDirector.prototype.objectiveFor = function multiSeatObjectiveFor(owner) {
     return aHostile - bHostile;
   });
   const site = candidates[0] || this.sites[0];
-  return site ? new THREE.Vector3(...site.def.position) : new THREE.Vector3(0, 0, 0);
+  return site ? new THREE.Vector3(site.def.position[0], 0, site.def.position[2]) : new THREE.Vector3(0, 0, 0);
 };
