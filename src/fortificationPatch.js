@@ -41,7 +41,7 @@ function makeGateVisual(building,faction,enemy,width,depth){
   }
   const lintel=shadow(new THREE.Mesh(new THREE.BoxGeometry(width-1.25,.48,depth),material(p.dark)));lintel.position.y=2.5;building.add(lintel);
   const door=shadow(new THREE.Mesh(new THREE.BoxGeometry(width-1.65,1.72,.18),material(p.dark)));door.position.y=1.08;building.add(door);
-  door.userData.gateDoor=true;door.userData.closedY=1.08;door.userData.openY=2.55;building.userData.gateDoor=door;
+  door.userData.gateDoor=true;door.userData.closedY=1.08;door.userData.openY=2.55;building.userData.gateDoor=door;building.userData.gateOpen=false;
 }
 
 function nearestFriendlyFortification(world,building){
@@ -84,7 +84,7 @@ function setupFortification(world,building,def,faction,enemy){
   const width=Math.max(3.2,Number(cfg.width||5.4)),depth=Math.max(.55,Number(cfg.depth||.85));
   building.userData.fortification={kind:cfg.kind||def.role,width,depth,passFriendly:Boolean(cfg.passFriendly)};
   building.userData.radius=Math.max(2.1,width*.48);
-  building.userData.visionRadius=def.role==="gate"?6.5:5.5;
+  building.userData.visionRadius=0;
   if(def.role==="gate")makeGateVisual(building,faction,enemy,width,depth);else makeWallVisual(building,faction,enemy,width,depth);
   alignAndSnapFortification(world,building);
   return building;
@@ -133,6 +133,7 @@ function animateGates(world,dt){
       const dx=entity.position.x-gate.position.x,dz=entity.position.z-gate.position.z;
       return dx*dx+dz*dz<22;
     });
+    gate.userData.gateOpen=Boolean(friendlyNear);
     const target=friendlyNear?door.userData.openY:door.userData.closedY;
     door.position.y+=(target-door.position.y)*Math.min(1,dt*6.5);
   }
