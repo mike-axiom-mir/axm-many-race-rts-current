@@ -32,12 +32,13 @@ function unitCard(faction, unit) {
   const profile = resolvedCombatProfile(unit);
   const squadSize = unit.squadSize || faction.military?.squadSize || 5;
   const role = roleCounterText(profile.role);
+  const unlockAge = Number.isFinite(unit.unlockAge) ? Number(unit.unlockAge) : Math.max(0, faction.units.indexOf(unit));
   return `<div class="unit">
     <b>${escapeHtml(unit.name)}</b>
     ${escapeHtml(unit.description || "")}<br>
     <span class="muted">${escapeHtml(role)} • squad ${squadSize}</span><br>
     <span class="muted">HP/member ${unit.hp} • DMG/member ${unit.damage} • RNG ${unit.range} • SPD ${unit.speed}</span><br>
-    <span class="muted">Armor ${pct(profile.armor)} • attack ${profile.attackInterval.toFixed(2)}s • unlock Age ${Number(unit.unlockAge ?? 0) + 1}</span>
+    <span class="muted">Armor ${pct(profile.armor)} • attack ${profile.attackInterval.toFixed(2)}s • unlock Age ${unlockAge + 1}</span>
   </div>`;
 }
 
