@@ -243,7 +243,7 @@ class RainWeatherSystem {
     }
     this.badge.classList.remove("hidden");
     const untilShift = RAIN_RELOCATE_SECONDS - (this.matchTime % RAIN_RELOCATE_SECONDS);
-    this.badge.textContent = `RAIN • SHIFT ${formatClock(untilShift)} • -10% SPEED`;
+    this.badge.textContent = `RAIN ${formatClock(untilShift)} • -10%`;
   }
 
   update(time, dt) {
