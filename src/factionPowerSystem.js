@@ -122,6 +122,7 @@ export class FactionPowerSystem {
 
   reset() {
     for (const faction of Object.values(this.world.__axmFactionByOwner || {})) this.restoreEconomy(faction);
+    this.time = 0;
     this.states.clear();
     for (const pulse of this.pulses) this.disposePulse(pulse);
     this.pulses.length = 0;
@@ -339,8 +340,8 @@ export class FactionPowerSystem {
     }
   }
 
-  update(dt, time) {
-    this.time = Number(time || 0);
+  update(dt) {
+    this.time += Math.max(0, Number(dt || 0));
     this.updateActiveOwners(dt);
     this.maybeUseEnemyPower();
     this.updatePulses(dt);
@@ -364,7 +365,7 @@ export function activateFactionPower(world, owner, powerId) {
 
 FactionRuntime.prototype.update = function factionPowerAwareUpdate(dt, time = 0) {
   const result = previousFactionUpdate.call(this, dt, time);
-  ensureFactionPowerSystem(this.world).update(dt, time);
+  ensureFactionPowerSystem(this.world).update(dt);
   return result;
 };
 
