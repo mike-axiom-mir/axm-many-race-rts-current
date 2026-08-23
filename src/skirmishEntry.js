@@ -12,6 +12,7 @@ import "./fortificationPatch.js";
 import "./visualDepthPatch.js";
 import "./fogOfWarPatch.js";
 import "./battlePatch.js";
+import "./combatDeathVisualPatch.js";
 import "./multiSeatPatch.js";
 import "./mapSeatStartPatch.js";
 import "./seatCommandAuthorityPatch.js";
