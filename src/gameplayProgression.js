@@ -79,15 +79,18 @@ export function enemyAllocationForFaction(faction) {
 }
 
 export function chooseEnemyUnit(faction, age, buildings = []) {
-  const available = (faction?.units || []).filter(unit => unitAvailability({ faction, unit, age, buildings }).ready);
+  const allAvailable = (faction?.units || []).filter(unit => unitAvailability({ faction, unit, age, buildings }).ready);
+  const combatAvailable = allAvailable.filter(unit => !unit.scout);
+  const available = combatAvailable.length ? combatAvailable : allAvailable;
   if (!available.length) return null;
   if (available.length === 1) return available[0];
 
+  // Later roster options should actually appear in armies. Keep a slight bias toward
+  // early/core formations without starving support, siege and alternate-role units.
   const weights = available.map((unit, index) => {
-    if (index === 0) return .42;
-    if (index === 1) return .30;
-    if (index === 2) return .18;
-    return .10 / Math.max(1, available.length - 3);
+    const ageWeight = 1 / (1 + Math.max(0, unitUnlockAge(faction, unit)) * .10);
+    const rosterWeight = 1 / (1 + index * .08);
+    return ageWeight * rosterWeight;
   });
   const total = weights.reduce((sum, value) => sum + value, 0);
   let roll = Math.random() * total;
@@ -96,6 +99,18 @@ export function chooseEnemyUnit(faction, age, buildings = []) {
     if (roll <= 0) return available[index];
   }
   return available[available.length - 1];
+}
+
+function leastBuiltDefinition(candidates, living) {
+  if (!candidates.length) return null;
+  const counts = new Map();
+  for (const building of living) {
+    const id = building.userData?.id;
+    if (id) counts.set(id, (counts.get(id) || 0) + 1);
+  }
+  const min = Math.min(...candidates.map(candidate => counts.get(candidate.id) || 0));
+  const least = candidates.filter(candidate => (counts.get(candidate.id) || 0) === min);
+  return least[Math.floor(Math.random() * least.length)] || candidates[0];
 }
 
 export function chooseEnemyBuilding(faction, existing = [], age = 0) {
@@ -119,8 +134,10 @@ export function chooseEnemyBuilding(faction, existing = [], age = 0) {
     "defense"
   ].filter(Boolean);
   for (const role of priorities) {
-    const match = role === "upgrade-hub" ? hub : candidates.find(building => building.role === role);
+    if (role === "upgrade-hub") return hub;
+    const roleCandidates = candidates.filter(building => building.role === role);
+    const match = leastBuiltDefinition(roleCandidates, living);
     if (match) return match;
   }
-  return candidates[0] || null;
+  return candidates.find(building => building.role !== "wall" && building.role !== "gate") || candidates[0] || null;
 }
