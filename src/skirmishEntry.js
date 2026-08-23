@@ -1,4 +1,5 @@
 import "./selectedMapPatch.js";
+import "./mapVisualRuntimePatch.js";
 import "./combatDepthPatch.js";
 import "./rosterAnimationPatch.js";
 import "./battlePatch.js";
