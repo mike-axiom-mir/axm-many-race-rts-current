@@ -51,6 +51,26 @@ function drawTerrain(ctx, width, height) {
   }
 }
 
+function drawFortification(ctx, entity, x, y) {
+  const data = entity.userData;
+  const cfg = data.fortification || {};
+  const length = Math.max(9, Math.min(18, Number(cfg.width || 5.4) * 2.4));
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(-entity.rotation.y);
+  ctx.strokeStyle = ctx.fillStyle;
+  ctx.lineWidth = data.role === "gate" ? 3 : 4;
+  ctx.beginPath();
+  if (data.role === "gate") {
+    ctx.moveTo(-length / 2, 0); ctx.lineTo(-2.5, 0);
+    ctx.moveTo(2.5, 0); ctx.lineTo(length / 2, 0);
+  } else {
+    ctx.moveTo(-length / 2, 0); ctx.lineTo(length / 2, 0);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawEntity(ctx, world, entity, width, height) {
   const data = entity.userData;
   if (!entity.parent || data.hp <= 0 || !data.owner) return;
@@ -58,6 +78,7 @@ function drawEntity(ctx, world, entity, width, height) {
   const x = toMapX(entity.position.x, width), y = toMapY(entity.position.z, height);
   ctx.fillStyle = OWNER_COLORS[data.owner] || "#d8e2e8";
   if (data.type === "capital") { ctx.fillRect(x - 6, y - 6, 12, 12); ctx.strokeStyle = "rgba(255,255,255,.75)"; ctx.strokeRect(x - 7, y - 7, 14, 14); }
+  else if (data.type === "building" && (data.role === "wall" || data.role === "gate")) drawFortification(ctx, entity, x, y);
   else if (data.type === "building") ctx.fillRect(x - 4, y - 4, 8, 8);
   else if (data.type === "founder") { ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#fff6c9"; ctx.stroke(); }
   else if (data.type === "squad") { ctx.beginPath(); ctx.arc(x, y, data.isScout ? 4 : 3.2, 0, Math.PI * 2); ctx.fill(); }
