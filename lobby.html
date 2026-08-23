@@ -10,7 +10,7 @@
 <body>
   <div class="lobby-shell">
     <header class="lobby-head">
-      <div class="identity"><a href="./index.html" class="mark" style="text-decoration:none">AXM</a><div><div class="tag">SKIRMISH</div><h1>War Table Lobby</h1><p>1–4 active seats • four slots by default</p></div></div>
+      <div class="identity"><a href="./index.html" class="mark" style="text-decoration:none">AXM</a><div><div class="tag">SKIRMISH</div><h1>War Table Lobby</h1><p>1–4 player-controlled seats • four civilization slots by default</p></div></div>
       <a class="back" href="./index.html">← Main menu</a>
     </header>
 
@@ -18,12 +18,12 @@
       <section class="panel glass">
         <div class="section-title">Players / controllers</div>
         <div id="seatList" class="seat-list"></div>
-        <div class="ai-note" style="margin-top:12px"><b>Connected AI seats are player seats.</b> They must receive the same visible match state a human in that seat would receive. The faction's own NPC brain is a separate in-game strategist and can also be reused inside Battle Maps.</div>
+        <div class="ai-note" style="margin-top:12px"><b>Connected AI seats are player seats.</b> They must receive the same visible match state a human in that seat would receive. The faction's own NPC brain is a separate in-game strategist and can also be reused inside Battle Maps. For single-player, keep at least one Faction AI opponent active.</div>
       </section>
 
       <aside class="panel glass">
         <div class="section-title">Match setup</div>
-        <div class="map-card"><b id="mapName">Founder's Crossing</b><p id="mapDescription">Current stable flat skirmish battlefield. Four-seat lobby metadata is ready even while the battle runtime still grows beyond its original two-side adapter.</p></div>
+        <div class="map-card"><b id="mapName">Founder's Crossing</b><p id="mapDescription">Current stable flat skirmish battlefield. The adapter can now place up to four civilizations; extra human/network control and independent macro economies continue to mature separately.</p></div>
 
         <div class="settings-grid" style="margin-top:12px">
           <label><span>Map</span><select id="mapSelect"><option value="founders-crossing">Founder's Crossing</option><option value="crownworld">Crownworld (Globe)</option></select></label>
@@ -42,7 +42,7 @@
           <button id="saveBtn">Save lobby</button>
           <a id="launchBtn" href="./skirmish.html">Launch</a>
         </div>
-        <div class="future"><b>Current cap: 4 seats.</b> The data contract deliberately stores lobby capacity separately from map size so later stable maps can opt into 8 and 12 seats without redesigning the lobby format.</div>
+        <div class="future"><b>Current cap: 4 civilization slots.</b> The data contract keeps lobby capacity separate from map size so stable maps can later opt into 8 and 12 slots without redesigning the lobby format.</div>
       </aside>
     </main>
   </div>
