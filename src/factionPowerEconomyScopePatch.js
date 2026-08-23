@@ -18,5 +18,12 @@ FactionPowerSystem.prototype.activate = function primaryEconomyPowerActivation(o
   if (power?.kind === "eco" && owner !== "player" && owner !== "enemy") {
     return { ok: false, reason: "That seat has no independent economy ledger yet; use Attack or Defense instead." };
   }
+  if (power?.kind === "eco" && (owner === "player" || owner === "enemy")) {
+    const otherOwner = owner === "player" ? "enemy" : "player";
+    const otherFaction = this.factionFor(otherOwner);
+    if (otherFaction?.id === faction?.id) {
+      return { ok: false, reason: "Mirrored factions currently share one economy definition; use Attack or Defense in this matchup." };
+    }
+  }
   return previousActivate.call(this, owner, powerId, source);
 };
