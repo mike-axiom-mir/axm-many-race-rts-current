@@ -1,6 +1,11 @@
 import { RTSWorld } from "./world.js";
 import { DEFAULT_MAP } from "./maps.js";
-import { findTerrainRoute, terrainSegmentWalkable } from "./terrainPassability.js";
+import {
+  findTerrainRoute,
+  movementSurfaceAt,
+  terrainMovementMultiplierAt,
+  terrainSegmentWalkable
+} from "./terrainPassability.js";
 
 const previousMovement = RTSWorld.prototype.updateMovement;
 
@@ -37,6 +42,14 @@ function makeRoute(entity, goal) {
   };
 }
 
+function moveWithSurface(world, entity, dt, time) {
+  const paint = movementSurfaceAt(DEFAULT_MAP, entity.position.x, entity.position.z);
+  const multiplier = terrainMovementMultiplierAt(DEFAULT_MAP, entity.position.x, entity.position.z);
+  entity.userData.surfaceMovementMultiplier = multiplier;
+  entity.userData.surfaceSkin = paint?.skin || "grassland";
+  return previousMovement.call(world, entity, dt * multiplier, time);
+}
+
 RTSWorld.prototype.updateMovement = function terrainAwareMovement(entity, dt, time) {
   const data = entity?.userData || {};
   if ((data.type !== "squad" && data.type !== "founder") || !data.target) {
@@ -53,7 +66,7 @@ RTSWorld.prototype.updateMovement = function terrainAwareMovement(entity, dt, ti
   if (route.direct) {
     data.terrainBlocked = false;
     data.terrainRouteExpanded = 0;
-    return previousMovement.call(this, entity, dt, time);
+    return moveWithSurface(this, entity, dt, time);
   }
 
   while (route.index < route.waypoints.length && flatDistance(entity.position, route.waypoints[route.index]) < .78) {
@@ -70,7 +83,7 @@ RTSWorld.prototype.updateMovement = function terrainAwareMovement(entity, dt, ti
     }
     data.terrainBlocked = false;
     data.target = finalTarget;
-    return previousMovement.call(this, entity, dt, time);
+    return moveWithSurface(this, entity, dt, time);
   }
 
   const waypoint = route.waypoints[route.index];
@@ -78,7 +91,7 @@ RTSWorld.prototype.updateMovement = function terrainAwareMovement(entity, dt, ti
   temporaryTarget.x = waypoint.x;
   temporaryTarget.z = waypoint.z;
   data.target = temporaryTarget;
-  const result = previousMovement.call(this, entity, dt, time);
+  const result = moveWithSurface(this, entity, dt, time);
 
   if (!entity.parent || data.hp <= 0) return result;
   if (flatDistance(entity.position, waypoint) < .78) route.index++;
