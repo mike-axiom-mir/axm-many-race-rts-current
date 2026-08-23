@@ -1,4 +1,8 @@
+import { STARTER_FACTION_NPCS } from "./starterFactionNpcs.js";
+
 export const FACTION_NPCS = {
+  ...STARTER_FACTION_NPCS,
+
   northpole: {
     id: "npc-northpole-steward",
     factionId: "northpole",
