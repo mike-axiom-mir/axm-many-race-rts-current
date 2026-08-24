@@ -32,6 +32,19 @@ async function fetchTarget(target) {
   }
 }
 
+function semanticFrameResult(target, iframe) {
+  if (target.id !== "economy-parity") return null;
+  const report = iframe.contentWindow?.__AXM_RTS_ECONOMY_PARITY__;
+  if (!report) return { target, status: "fail", detail: "Economy parity page loaded but published no parity report" };
+  return {
+    target,
+    status: report.ok ? "pass" : "fail",
+    detail: report.ok
+      ? `Economy parity ${report.passed}/${report.total} checks passed • authority unchanged`
+      : `Economy parity failed ${report.failed}/${report.total} checks`
+  };
+}
+
 async function frameLoadTarget(target, timeoutMs = 5000) {
   return new Promise(resolve => {
     const iframe = document.createElement("iframe");
@@ -60,11 +73,10 @@ async function frameLoadTarget(target, timeoutMs = 5000) {
         const doc = iframe.contentDocument;
         const hasBody = Boolean(doc?.body);
         const hasContent = Boolean(doc?.body?.children?.length || doc?.body?.textContent?.trim());
-        finish({
-          target,
-          status: hasBody && hasContent ? "pass" : "fail",
-          detail: hasBody && hasContent ? "Page load event + rendered document at 1280×720" : "Loaded without usable document content"
-        });
+        if (!hasBody || !hasContent) return finish({ target, status: "fail", detail: "Loaded without usable document content" });
+        const semantic = semanticFrameResult(target, iframe);
+        if (semantic) return finish(semantic);
+        finish({ target, status: "pass", detail: "Page load event + rendered document at 1280×720" });
       } catch (error) {
         finish({ target, status: "fail", detail: error?.message || String(error) });
       }
@@ -85,7 +97,7 @@ async function verifyTarget(target) {
 function render(results) {
   resultsNode.replaceChildren(...results.map(rowFor));
   const summary = verificationSummary(results);
-  summaryNode.textContent = `${summary.passed}/${summary.total} page smoke checks passed${summary.criticalFailures ? ` • ${summary.criticalFailures} critical failure(s)` : ""}.`;
+  summaryNode.textContent = `${summary.passed}/${summary.total} verification checks passed${summary.criticalFailures ? ` • ${summary.criticalFailures} critical failure(s)` : ""}.`;
   summaryNode.dataset.ok = String(summary.ok);
   exportButton.disabled = results.length === 0;
 }
@@ -93,7 +105,7 @@ function render(results) {
 async function run() {
   runButton.disabled = true;
   exportButton.disabled = true;
-  summaryNode.textContent = "Running browser page smoke checks…";
+  summaryNode.textContent = "Running browser verification checks…";
   latestResults = [];
   render(latestResults);
 
@@ -108,10 +120,10 @@ async function run() {
 
 function exportReceipt() {
   const receipt = {
-    schema: "axm-rts-runtime-verification/v1",
+    schema: "axm-rts-runtime-verification/v2",
     generatedAt: new Date().toISOString(),
-    scope: "browser-page-smoke-only",
-    warning: "PASS proves fetch + page load/render only. It does not prove full gameplay interactions, deterministic outcomes, or visual correctness.",
+    scope: "browser-page-smoke+economy-parity",
+    warning: "Runtime page PASS proves fetch + page load/render. The economy-parity target additionally proves its locked formula comparison suite passed. Neither proves complete gameplay interaction or visual correctness.",
     summary: verificationSummary(latestResults),
     results: latestResults.map(result => ({
       id: result.target.id,
