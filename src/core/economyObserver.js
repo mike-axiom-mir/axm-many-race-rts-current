@@ -37,8 +37,10 @@ export class EconomyObserver {
     const resources = resourceVector(state);
     if (!resources) return null;
     const current = { tick: Math.max(0, Math.trunc(Number(tick) || 0)), time: Math.max(0, Number(time) || 0), resources };
-    let observedRate = null;
+    const lastSample = this.samples[this.samples.length - 1];
+    if (lastSample && lastSample.tick === current.tick && Math.abs(lastSample.time - current.time) < 1e-9) return clone(lastSample);
 
+    let observedRate = null;
     if (this.previous && current.time > this.previous.time) {
       const dt = current.time - this.previous.time;
       observedRate = Object.fromEntries(RESOURCE_KEYS.map(key => [key, (current.resources[key] - this.previous.resources[key]) / dt]));
