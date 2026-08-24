@@ -1,46 +1,36 @@
 import { RTSWorld } from "../world.js";
+import { normalizeSkirmishCommand } from "./commandSchema.js";
+import { createEconomyObserver } from "./economyObserver.js";
 import { createEntityIdAllocator } from "./entityIdentity.js";
+import { readPublicSkirmishState } from "./publicSkirmishState.js";
 import { createReplayBridge } from "./replayBridge.js";
-import { createSeededRng } from "./seededRng.js";
+import { snapshotFingerprint } from "./runtimeSnapshot.js";
 
-const originalMathRandom = Math.random.bind(Math);
 const bridges = new WeakMap();
-let activeBridge = null;
 let lastWorld = null;
 
-function querySeed() {
-  if (typeof location === "undefined") return "axm-rts-skirmish-v1";
-  return new URLSearchParams(location.search).get("seed") || "axm-rts-skirmish-v1";
+function queryObservationSeed() {
+  if (typeof location === "undefined") return "axm-rts-observation-v1";
+  return new URLSearchParams(location.search).get("seed") || "axm-rts-observation-v1";
 }
 
 class SkirmishFoundationBridge {
   constructor(world) {
     this.world = world;
-    this.seed = querySeed();
+    this.observationSeed = queryObservationSeed();
     this.ids = createEntityIdAllocator({ namespace: "flat" });
-    this.legacyRng = createSeededRng(this.seed, "legacy-math-random");
-    this.replay = createReplayBridge({ seed: this.seed, mode: "skirmish", projection: "flat", tickRate: 20, snapshotEveryTicks: 20 });
-    this.legacyRandomCalls = 0;
+    this.replay = createReplayBridge({ seed: this.observationSeed, mode: "skirmish", projection: "flat", tickRate: 20, snapshotEveryTicks: 20 });
+    this.economy = createEconomyObserver({ maxSamples: 180 });
+    this.latestPublicState = null;
     this.matchSerial = 0;
   }
 
   resetMatch() {
     this.matchSerial += 1;
     this.ids.reset();
-    this.legacyRng.reset(this.seed, "legacy-math-random");
-    this.legacyRandomCalls = 0;
     this.replay.reset();
-    this.installLegacyRandomBridge();
-  }
-
-  installLegacyRandomBridge() {
-    activeBridge = this;
-    Math.random = () => {
-      const bridge = activeBridge;
-      if (!bridge) return originalMathRandom();
-      bridge.legacyRandomCalls += 1;
-      return bridge.legacyRng.next();
-    };
+    this.economy.reset();
+    this.latestPublicState = null;
   }
 
   ensureIdentity(entity, faction = null) {
@@ -54,20 +44,57 @@ class SkirmishFoundationBridge {
     this.ids.ensureWorld(this.world);
   }
 
+  recordObservedCommand(command = {}) {
+    const normalized = normalizeSkirmishCommand(command);
+    this.replay.recordCommand(normalized);
+    return normalized;
+  }
+
+  observePublicState() {
+    const state = readPublicSkirmishState(this.world);
+    this.latestPublicState = state;
+    this.economy.observe({ tick: this.replay.clock.tick, time: this.replay.clock.simulationTime, state });
+    return state;
+  }
+
   snapshot() {
     this.ensureWorldIdentities();
-    return this.replay.snapshot(this.world);
+    const worldSnapshot = this.replay.snapshot(this.world);
+    const publicState = this.observePublicState();
+    const combined = {
+      ...worldSnapshot,
+      variables: {
+        ...(worldSnapshot.variables || {}),
+        snapshotCoverage: "world-entities+public-skirmish-state",
+        publicStateAuthoritative: false,
+        gameplayRandomness: "native-per-run"
+      },
+      publicState
+    };
+    delete combined.fingerprint;
+    combined.fingerprint = snapshotFingerprint(combined);
+    return Object.freeze(combined);
   }
 
   exportReplayReceipt() {
     this.ensureWorldIdentities();
+    const base = this.replay.exportReceipt(this.world);
+    const latestSnapshot = this.snapshot();
     return {
-      ...this.replay.exportReceipt(this.world),
-      migration: {
-        legacyMathRandomShim: true,
-        legacyRandomCalls: this.legacyRandomCalls,
-        note: "Math.random is seeded only as a temporary compatibility bridge. Gameplay call sites still need explicit stream migration before deterministic authority is claimed."
-      }
+      ...base,
+      schema: "axm-rts-replay-observation/v2",
+      seed: this.observationSeed,
+      coverage: "world-entities+observed-commands+public-skirmish-state",
+      warning: "Observer receipt only. Normal gameplay keeps its original native per-run randomness and variable-step authority.",
+      randomPolicy: {
+        gameplay: "native-per-run",
+        globalMathRandomOverride: false,
+        observationSeedAffectsGameplay: false,
+        note: "Seed metadata is reserved for diagnostics and future explicitly opt-in deterministic modes."
+      },
+      economyObservation: this.economy.exportReceipt(),
+      latestSnapshotFingerprint: latestSnapshot.fingerprint,
+      latestSnapshot
     };
   }
 }
@@ -79,7 +106,6 @@ function ensureBridge(world) {
     bridges.set(world, bridge);
   }
   lastWorld = world;
-  activeBridge = bridge;
   return bridge;
 }
 
@@ -127,7 +153,7 @@ RTSWorld.prototype.removeEntity = function foundationRemoveEntity(entity, ...arg
 
 RTSWorld.prototype.command = function foundationCommand(owner, point, ...args) {
   const bridge = ensureBridge(this);
-  bridge.replay.recordCommand({
+  bridge.recordObservedCommand({
     type: "formation-order",
     seatId: owner,
     payload: { x: Number(point?.x || 0), y: Number(point?.y || 0), z: Number(point?.z || 0) }
@@ -138,25 +164,34 @@ RTSWorld.prototype.command = function foundationCommand(owner, point, ...args) {
 RTSWorld.prototype.tick = function foundationObservedTick(time, dt, ...args) {
   const result = previousTick.call(this, time, dt, ...args);
   const bridge = ensureBridge(this);
+  const previousSecond = Math.floor(bridge.replay.clock.tick / bridge.replay.tickRate);
   bridge.ensureWorldIdentities();
   bridge.replay.observeFrame(dt, this);
+  const nextSecond = Math.floor(bridge.replay.clock.tick / bridge.replay.tickRate);
+  if (nextSecond !== previousSecond) bridge.observePublicState();
   return result;
 };
 
 function publicBridge() {
   const bridge = lastWorld ? ensureBridge(lastWorld) : null;
   return {
-    version: 1,
+    version: 2,
     authority: "observer-only",
-    seed: bridge?.seed || querySeed(),
+    randomPolicy: "native-per-run",
+    observationSeed: bridge?.observationSeed || queryObservationSeed(),
     world: lastWorld,
+    readPublicState: () => bridge?.observePublicState() || null,
     snapshot: () => bridge?.snapshot() || null,
+    recordObservedCommand: command => bridge?.recordObservedCommand(command) || null,
     exportReplayReceipt: () => bridge?.exportReplayReceipt() || null,
     diagnostics: () => bridge ? {
-      seed: bridge.seed,
+      observationSeed: bridge.observationSeed,
+      observationSeedAffectsGameplay: false,
+      globalMathRandomOverride: false,
+      gameplayRandomness: "native-per-run",
       matchSerial: bridge.matchSerial,
       tick: bridge.replay.clock.tick,
-      legacyRandomCalls: bridge.legacyRandomCalls,
+      economySamples: bridge.economy.samples.length,
       entityCount: bridge.world?.entities?.length || 0
     } : null
   };
@@ -164,8 +199,4 @@ function publicBridge() {
 
 if (typeof window !== "undefined") {
   Object.defineProperty(window, "__AXM_RTS_SKIRMISH_BRIDGE__", { configurable: true, get: publicBridge });
-  window.addEventListener("beforeunload", () => {
-    activeBridge = null;
-    Math.random = originalMathRandom;
-  }, { once: true });
 }
