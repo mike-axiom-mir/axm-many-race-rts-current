@@ -3,9 +3,22 @@ import { incomeUpgradeMultiplier } from "../upgradeSystem.js";
 
 export const BASE_INCOME = Object.freeze({ food: .78, wood: .68, stone: .48, gold: .44 });
 
+const rateMetadata = new WeakMap();
+const incomeTickObservers = new Set();
+
 function finite(value, fallback = 0) {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
+}
+
+function cloneResources(resources = {}) {
+  return Object.fromEntries(RESOURCE_KEYS.map(key => [key, finite(resources[key], 0)]));
+}
+
+export function registerIncomeTickObserver(observer) {
+  if (typeof observer !== "function") throw new TypeError("Economy observer must be a function.");
+  incomeTickObservers.add(observer);
+  return () => incomeTickObservers.delete(observer);
 }
 
 export function normalizeAllocation(allocation = {}) {
@@ -40,19 +53,35 @@ export function calculateIncomeRate({
 
   for (const key of RESOURCE_KEYS) {
     const share = finite(allocation[key], 0);
-    const factionMultiplier = finite(faction.economy?.[key] || 1, 1);
-    let gain = finite(workforce, 0) * share * BASE_INCOME[key] * factionMultiplier * ageMultiplier;
+    let gain = finite(workforce, 0) * share * BASE_INCOME[key] * (faction.economy?.[key] || 1) * ageMultiplier;
     gain += livingBuildingIncome(faction, buildings, key);
     gain += finite(territoryBonus?.[key], 0) * ageMultiplier;
     rate[key] = gain * upgradeMultiplier;
   }
 
+  rateMetadata.set(rate, { faction, workforce, allocation, age, buildings, territoryBonus, upgradeLevels });
   return rate;
 }
 
 export function applyIncomeTick(resources, rates, dt) {
   const step = Math.max(0, finite(dt, 0));
+  const before = incomeTickObservers.size ? cloneResources(resources) : null;
   for (const key of RESOURCE_KEYS) resources[key] = finite(resources[key], 0) + finite(rates?.[key], 0) * step;
+
+  if (incomeTickObservers.size) {
+    const event = {
+      resources,
+      beforeResources: before,
+      afterResources: cloneResources(resources),
+      rates: cloneResources(rates),
+      dt: step,
+      input: rateMetadata.get(rates) || null
+    };
+    for (const observer of [...incomeTickObservers]) {
+      try { observer(event); }
+      catch (error) { console.warn("AXM economy observation skipped:", error); }
+    }
+  }
   return resources;
 }
 
