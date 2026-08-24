@@ -1,5 +1,6 @@
 import { RTSWorld } from "../world.js";
 import { normalizeSkirmishCommand } from "./commandSchema.js";
+import { skirmishEconomyDriftProbe } from "./economyDriftProbe.js";
 import { createEconomyObserver } from "./economyObserver.js";
 import { createEntityIdAllocator } from "./entityIdentity.js";
 import { readPublicSkirmishState } from "./publicSkirmishState.js";
@@ -30,6 +31,7 @@ class SkirmishFoundationBridge {
     this.ids.reset();
     this.replay.reset();
     this.economy.reset();
+    skirmishEconomyDriftProbe.reset();
     this.latestPublicState = null;
   }
 
@@ -82,9 +84,9 @@ class SkirmishFoundationBridge {
     const latestSnapshot = this.snapshot();
     return {
       ...base,
-      schema: "axm-rts-replay-observation/v2",
+      schema: "axm-rts-replay-observation/v3",
       seed: this.observationSeed,
-      coverage: "world-entities+observed-commands+public-skirmish-state",
+      coverage: "world-entities+observed-commands+public-skirmish-state+economy-drift",
       warning: "Observer receipt only. Normal gameplay keeps its original native per-run randomness and variable-step authority.",
       randomPolicy: {
         gameplay: "native-per-run",
@@ -93,6 +95,7 @@ class SkirmishFoundationBridge {
         note: "Seed metadata is reserved for diagnostics and future explicitly opt-in deterministic modes."
       },
       economyObservation: this.economy.exportReceipt(),
+      economyDrift: skirmishEconomyDriftProbe.exportReceipt(),
       latestSnapshotFingerprint: latestSnapshot.fingerprint,
       latestSnapshot
     };
@@ -175,13 +178,14 @@ RTSWorld.prototype.tick = function foundationObservedTick(time, dt, ...args) {
 function publicBridge() {
   const bridge = lastWorld ? ensureBridge(lastWorld) : null;
   return {
-    version: 2,
+    version: 3,
     authority: "observer-only",
     randomPolicy: "native-per-run",
     observationSeed: bridge?.observationSeed || queryObservationSeed(),
     world: lastWorld,
     readPublicState: () => bridge?.observePublicState() || null,
     snapshot: () => bridge?.snapshot() || null,
+    economyDrift: () => skirmishEconomyDriftProbe.exportReceipt(),
     recordObservedCommand: command => bridge?.recordObservedCommand(command) || null,
     exportReplayReceipt: () => bridge?.exportReplayReceipt() || null,
     diagnostics: () => bridge ? {
@@ -192,6 +196,7 @@ function publicBridge() {
       matchSerial: bridge.matchSerial,
       tick: bridge.replay.clock.tick,
       economySamples: bridge.economy.samples.length,
+      economyDrift: skirmishEconomyDriftProbe.exportReceipt(),
       entityCount: bridge.world?.entities?.length || 0
     } : null
   };
