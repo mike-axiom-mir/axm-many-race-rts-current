@@ -40,7 +40,8 @@ export function calculateIncomeRate({
 
   for (const key of RESOURCE_KEYS) {
     const share = finite(allocation[key], 0);
-    let gain = finite(workforce, 0) * share * BASE_INCOME[key] * finite(faction.economy?.[key], 1) * ageMultiplier;
+    const factionMultiplier = finite(faction.economy?.[key] || 1, 1);
+    let gain = finite(workforce, 0) * share * BASE_INCOME[key] * factionMultiplier * ageMultiplier;
     gain += livingBuildingIncome(faction, buildings, key);
     gain += finite(territoryBonus?.[key], 0) * ageMultiplier;
     rate[key] = gain * upgradeMultiplier;
