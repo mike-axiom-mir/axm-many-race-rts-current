@@ -7,7 +7,8 @@ export const RUNTIME_VERIFICATION_TARGETS = Object.freeze([
   { id: "scenario", label: "Scenario Studio", href: "scenario.html", kind: "authoring", critical: true },
   { id: "battle-editor", label: "Battle Editor", href: "battle-editor.html", kind: "authoring", critical: false },
   { id: "atlas", label: "Atlas", href: "atlas.html", kind: "content", critical: false },
-  { id: "battlemaps", label: "Battle Maps", href: "battlemaps.html", kind: "content", critical: false }
+  { id: "battlemaps", label: "Battle Maps", href: "battlemaps.html", kind: "content", critical: false },
+  { id: "economy-parity", label: "Economy Parity Gate", href: "economy-parity.html", kind: "verification", critical: false }
 ]);
 
 export function verificationSummary(results = []) {
