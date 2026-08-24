@@ -1,3 +1,4 @@
+import "./core/foundationBootstrap.js";
 import "./selectedMapPatch.js";
 import "./defenseRosterRegistryPatch.js";
 import "./scoutRegistryPatch.js";
