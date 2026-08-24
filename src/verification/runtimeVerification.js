@@ -33,16 +33,31 @@ async function fetchTarget(target) {
 }
 
 function semanticFrameResult(target, iframe) {
-  if (target.id !== "economy-parity") return null;
-  const report = iframe.contentWindow?.__AXM_RTS_ECONOMY_PARITY__;
-  if (!report) return { target, status: "fail", detail: "Economy parity page loaded but published no parity report" };
-  return {
-    target,
-    status: report.ok ? "pass" : "fail",
-    detail: report.ok
-      ? `Economy parity ${report.passed}/${report.total} checks passed • authority unchanged`
-      : `Economy parity failed ${report.failed}/${report.total} checks`
-  };
+  if (target.id === "economy-parity") {
+    const report = iframe.contentWindow?.__AXM_RTS_ECONOMY_PARITY__;
+    if (!report) return { target, status: "fail", detail: "Economy parity page loaded but published no parity report" };
+    return {
+      target,
+      status: report.ok ? "pass" : "fail",
+      detail: report.ok
+        ? `Economy parity ${report.passed}/${report.total} checks passed • authority unchanged`
+        : `Economy parity failed ${report.failed}/${report.total} checks`
+    };
+  }
+
+  if (target.id === "economy-drift") {
+    const report = iframe.contentWindow?.__AXM_RTS_ECONOMY_DRIFT_HARNESS__;
+    if (!report) return { target, status: "fail", detail: "Economy drift page loaded but published no probe report" };
+    return {
+      target,
+      status: report.ok ? "pass" : "fail",
+      detail: report.ok
+        ? `Economy drift probe ${report.passed}/${report.total} sanity checks passed • shadow only`
+        : `Economy drift probe failed ${report.failed}/${report.total} checks`
+    };
+  }
+
+  return null;
 }
 
 async function frameLoadTarget(target, timeoutMs = 5000) {
@@ -120,10 +135,10 @@ async function run() {
 
 function exportReceipt() {
   const receipt = {
-    schema: "axm-rts-runtime-verification/v2",
+    schema: "axm-rts-runtime-verification/v3",
     generatedAt: new Date().toISOString(),
-    scope: "browser-page-smoke+economy-parity",
-    warning: "Runtime page PASS proves fetch + page load/render. The economy-parity target additionally proves its locked formula comparison suite passed. Neither proves complete gameplay interaction or visual correctness.",
+    scope: "browser-page-smoke+economy-parity+economy-drift-probe",
+    warning: "Runtime page PASS proves fetch + page load/render. Economy semantic targets additionally prove their locked harnesses passed. A drift-probe PASS validates the probe mechanics only; real-match zero drift must be measured from the live Skirmish bridge before any authority transfer.",
     summary: verificationSummary(latestResults),
     results: latestResults.map(result => ({
       id: result.target.id,
