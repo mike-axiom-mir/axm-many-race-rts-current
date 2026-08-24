@@ -35,7 +35,17 @@ async function fetchTarget(target) {
 async function frameLoadTarget(target, timeoutMs = 5000) {
   return new Promise(resolve => {
     const iframe = document.createElement("iframe");
-    iframe.hidden = true;
+    iframe.setAttribute("aria-hidden", "true");
+    Object.assign(iframe.style, {
+      position: "fixed",
+      left: "-10000px",
+      top: "0",
+      width: "1280px",
+      height: "720px",
+      border: "0",
+      opacity: "0",
+      pointerEvents: "none"
+    });
     let settled = false;
     const finish = result => {
       if (settled) return;
@@ -53,7 +63,7 @@ async function frameLoadTarget(target, timeoutMs = 5000) {
         finish({
           target,
           status: hasBody && hasContent ? "pass" : "fail",
-          detail: hasBody && hasContent ? "Page load event + rendered document" : "Loaded without usable document content"
+          detail: hasBody && hasContent ? "Page load event + rendered document at 1280×720" : "Loaded without usable document content"
         });
       } catch (error) {
         finish({ target, status: "fail", detail: error?.message || String(error) });
