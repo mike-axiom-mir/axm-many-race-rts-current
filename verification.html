@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AXM RTS Runtime Verification</title>
+  <link rel="stylesheet" href="verification.css" />
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <p class="eyebrow">AXM MANY-RACE RTS • PHASE 34</p>
+      <h1>Runtime Verification</h1>
+      <p>This page performs bounded browser smoke checks across the current RTS entry points. A PASS proves that the page can be fetched and reaches a rendered document; it does <strong>not</strong> claim full gameplay correctness.</p>
+    </header>
+
+    <section class="actions">
+      <button id="runVerification" type="button">Run smoke checks</button>
+      <button id="exportVerification" type="button" disabled>Export receipt</button>
+      <a href="index.html">Back to Skirmish</a>
+    </section>
+
+    <p id="verificationSummary" class="summary">No verification run yet.</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Status</th><th>Target</th><th>Kind</th><th>Entry</th><th>Evidence</th></tr>
+        </thead>
+        <tbody id="verificationResults"></tbody>
+      </table>
+    </div>
+
+    <aside>
+      <strong>Truth boundary:</strong> this is deliberately a smoke gate, not a fake “all systems tested” badge. Interaction, deterministic replay, visual comparison and full combat verification belong to later gates.
+    </aside>
+  </main>
+  <script type="module" src="src/verification/runtimeVerification.js"></script>
+</body>
+</html>
