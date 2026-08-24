@@ -36,11 +36,11 @@ export function calculateIncomeRate({
   if (!faction) throw new Error("calculateIncomeRate requires a faction.");
   const ageMultiplier = AGE_DATA[age]?.multiplier ?? 1;
   const upgradeMultiplier = incomeUpgradeMultiplier(upgradeLevels);
-  const shares = normalizeAllocation(allocation);
   const rate = {};
 
   for (const key of RESOURCE_KEYS) {
-    let gain = finite(workforce, 0) * shares[key] * BASE_INCOME[key] * finite(faction.economy?.[key], 1) * ageMultiplier;
+    const share = finite(allocation[key], 0);
+    let gain = finite(workforce, 0) * share * BASE_INCOME[key] * finite(faction.economy?.[key], 1) * ageMultiplier;
     gain += livingBuildingIncome(faction, buildings, key);
     gain += finite(territoryBonus?.[key], 0) * ageMultiplier;
     rate[key] = gain * upgradeMultiplier;
