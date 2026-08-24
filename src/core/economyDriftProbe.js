@@ -1,5 +1,5 @@
 import { RESOURCE_KEYS } from "../factions.js";
-import { applyIncomeTick, calculateIncomeRate, livingEconomyBuildingCount, populationGrowthInterval } from "./economySystem.js";
+import { calculateIncomeRate, registerIncomeTickObserver } from "./economySystem.js";
 import { createSimulationClock } from "./simulationClock.js";
 
 function finite(value, fallback = 0) {
@@ -20,6 +20,12 @@ function addResources(target, delta) {
   return target;
 }
 
+function integrateResources(target, rates, dt) {
+  const step = Math.max(0, finite(dt, 0));
+  for (const key of RESOURCE_KEYS) target[key] = finite(target[key], 0) + finite(rates?.[key], 0) * step;
+  return target;
+}
+
 function maxAbsVector(vector = {}) {
   return Math.max(0, ...RESOURCE_KEYS.map(key => Math.abs(finite(vector[key], 0))));
 }
@@ -27,39 +33,34 @@ function maxAbsVector(vector = {}) {
 function summarizeInput(input = {}) {
   return {
     factionId: input.faction?.id || null,
+    workforce: finite(input.workforce, 0),
     age: finite(input.age, 0),
     allocation: Object.fromEntries(RESOURCE_KEYS.map(key => [key, finite(input.allocation?.[key], 0)])),
     territoryBonus: Object.fromEntries(RESOURCE_KEYS.map(key => [key, finite(input.territoryBonus?.[key], 0)])),
     upgradeLevels: { ...(input.upgradeLevels || {}) },
-    livingBuildings: (input.buildings || []).filter(building => building?.parent && finite(building.userData?.hp, 0) > 0).length,
-    economyBuildings: livingEconomyBuildingCount(input.buildings || [])
+    livingBuildings: (input.buildings || []).filter(building => building?.parent && finite(building.userData?.hp, 0) > 0).length
   };
 }
 
-function projectedResources(side, input) {
-  const projected = cloneResources(side.resources);
-  if (side.clock.accumulator <= 0) return projected;
-  const rate = calculateIncomeRate({ ...input, workforce: side.workforce });
-  return applyIncomeTick(projected, rate, side.clock.accumulator);
+function projectedResources(channel, input) {
+  const projected = cloneResources(channel.resources);
+  if (channel.clock.accumulator <= 0) return projected;
+  const rate = calculateIncomeRate(input);
+  return integrateResources(projected, rate, channel.clock.accumulator);
 }
 
-function freshSide(tickRate) {
+function freshChannel(tickRate, label) {
   return {
+    label,
     clock: createSimulationClock({ tickRate, maxCatchUpTicks: 8 }),
     initialized: false,
     resources: null,
-    workforce: 0,
-    populationClock: 0,
     liveTime: 0,
     lastLiveAfterResources: null,
-    lastLiveAfterWorkforce: null,
-    lastLiveAfterPopulationClock: null,
     samples: [],
+    factionId: null,
     maxAbsResourceDrift: 0,
-    maxAbsWorkforceDrift: 0,
-    maxAbsPopulationClockDrift: 0,
-    externalResourceAdjustments: 0,
-    externalWorkforceAdjustments: 0
+    externalResourceAdjustments: 0
   };
 }
 
@@ -72,130 +73,101 @@ export class EconomyDriftProbe {
   }
 
   reset() {
-    this.sides = {
-      player: freshSide(this.tickRate),
-      enemy: freshSide(this.tickRate)
-    };
+    this.channels = {};
+    this.resourceChannels = new WeakMap();
+    this.channelSerial = 0;
   }
 
-  ensureSide(sideId) {
-    const id = String(sideId || "player");
-    if (!this.sides[id]) this.sides[id] = freshSide(this.tickRate);
-    return this.sides[id];
+  channelFor(resources) {
+    if (resources && this.resourceChannels.has(resources)) return this.resourceChannels.get(resources);
+    const serial = ++this.channelSerial;
+    const id = serial === 1 ? "player" : serial === 2 ? "enemy" : `stream-${serial}`;
+    this.channels[id] = freshChannel(this.tickRate, id);
+    if (resources && typeof resources === "object") this.resourceChannels.set(resources, id);
+    return id;
   }
 
-  observeLiveStep({
-    side = "player",
-    dt = 0,
-    beforeResources = {},
-    afterResources = {},
-    beforeWorkforce = 0,
-    afterWorkforce = 0,
-    beforePopulationClock = 0,
-    afterPopulationClock = 0,
-    input = {}
-  } = {}) {
-    const state = this.ensureSide(side);
+  observeIncomeTick({ resources, beforeResources = {}, afterResources = {}, dt = 0, input = null } = {}) {
+    if (!input?.faction) return null;
+    const channelId = this.channelFor(resources);
+    const channel = this.channels[channelId];
     const step = Math.max(0, finite(dt, 0));
-    if (!state.initialized) {
-      state.initialized = true;
-      state.resources = cloneResources(beforeResources);
-      state.workforce = finite(beforeWorkforce, 0);
-      state.populationClock = Math.max(0, finite(beforePopulationClock, 0));
+
+    if (!channel.initialized) {
+      channel.initialized = true;
+      channel.resources = cloneResources(beforeResources);
+      channel.factionId = input.faction?.id || null;
     } else {
-      const resourceAdjustment = resourceDelta(beforeResources, state.lastLiveAfterResources || beforeResources);
-      if (maxAbsVector(resourceAdjustment) > 1e-10) {
-        addResources(state.resources, resourceAdjustment);
-        state.externalResourceAdjustments += 1;
-      }
-      const workforceAdjustment = finite(beforeWorkforce, 0) - finite(state.lastLiveAfterWorkforce, beforeWorkforce);
-      if (Math.abs(workforceAdjustment) > 1e-10) {
-        state.workforce += workforceAdjustment;
-        state.externalWorkforceAdjustments += 1;
+      const adjustment = resourceDelta(beforeResources, channel.lastLiveAfterResources || beforeResources);
+      if (maxAbsVector(adjustment) > 1e-10) {
+        addResources(channel.resources, adjustment);
+        channel.externalResourceAdjustments += 1;
       }
     }
 
-    state.liveTime += step;
-    state.clock.step(step, ({ dt: fixedDt }) => {
-      const rate = calculateIncomeRate({ ...input, workforce: state.workforce });
-      applyIncomeTick(state.resources, rate, fixedDt);
-      state.populationClock += fixedDt;
-      const interval = populationGrowthInterval(livingEconomyBuildingCount(input.buildings || []), side);
-      if (state.populationClock + 1e-10 >= interval) {
-        state.populationClock = 0;
-        state.workforce += 1;
-      }
+    channel.liveTime += step;
+    channel.clock.step(step, ({ dt: fixedDt }) => {
+      const rate = calculateIncomeRate(input);
+      integrateResources(channel.resources, rate, fixedDt);
     });
 
-    const projected = projectedResources(state, input);
+    const projected = projectedResources(channel, input);
     const drift = resourceDelta(projected, afterResources);
-    const workforceDrift = state.workforce - finite(afterWorkforce, 0);
-    const projectedPopulationClock = state.populationClock + state.clock.accumulator;
-    const populationClockDrift = projectedPopulationClock - Math.max(0, finite(afterPopulationClock, 0));
     const maxResourceDrift = maxAbsVector(drift);
-
-    state.maxAbsResourceDrift = Math.max(state.maxAbsResourceDrift, maxResourceDrift);
-    state.maxAbsWorkforceDrift = Math.max(state.maxAbsWorkforceDrift, Math.abs(workforceDrift));
-    state.maxAbsPopulationClockDrift = Math.max(state.maxAbsPopulationClockDrift, Math.abs(populationClockDrift));
+    channel.maxAbsResourceDrift = Math.max(channel.maxAbsResourceDrift, maxResourceDrift);
 
     const sample = {
-      side: String(side),
-      liveTime: state.liveTime,
-      fixedTick: state.clock.tick,
-      fixedTime: state.clock.simulationTime,
-      accumulator: state.clock.accumulator,
+      channel: channelId,
+      factionId: input.faction?.id || null,
+      liveTime: channel.liveTime,
+      fixedTick: channel.clock.tick,
+      fixedTime: channel.clock.simulationTime,
+      accumulator: channel.clock.accumulator,
       liveResources: cloneResources(afterResources),
       shadowProjectedResources: projected,
       resourceDrift: drift,
       maxAbsResourceDrift: maxResourceDrift,
-      liveWorkforce: finite(afterWorkforce, 0),
-      shadowWorkforce: state.workforce,
-      workforceDrift,
-      livePopulationClock: Math.max(0, finite(afterPopulationClock, 0)),
-      shadowProjectedPopulationClock: projectedPopulationClock,
-      populationClockDrift,
       input: summarizeInput(input)
     };
 
-    state.samples.push(sample);
-    while (state.samples.length > this.maxSamples) state.samples.shift();
-    state.lastLiveAfterResources = cloneResources(afterResources);
-    state.lastLiveAfterWorkforce = finite(afterWorkforce, 0);
-    state.lastLiveAfterPopulationClock = Math.max(0, finite(afterPopulationClock, 0));
+    channel.samples.push(sample);
+    while (channel.samples.length > this.maxSamples) channel.samples.shift();
+    channel.lastLiveAfterResources = cloneResources(afterResources);
     return sample;
   }
 
-  sideReport(sideId) {
-    const state = this.ensureSide(sideId);
+  channelReport(channelId) {
+    const channel = this.channels[channelId];
+    if (!channel) return null;
     return {
-      initialized: state.initialized,
+      initialized: channel.initialized,
+      label: channel.label,
+      factionId: channel.factionId,
       tickRate: this.tickRate,
-      fixedTick: state.clock.tick,
-      liveTime: state.liveTime,
-      maxAbsResourceDrift: state.maxAbsResourceDrift,
-      maxAbsWorkforceDrift: state.maxAbsWorkforceDrift,
-      maxAbsPopulationClockDrift: state.maxAbsPopulationClockDrift,
-      strictZeroResourceDrift: state.initialized && state.maxAbsResourceDrift <= this.resourceTolerance,
-      externalResourceAdjustments: state.externalResourceAdjustments,
-      externalWorkforceAdjustments: state.externalWorkforceAdjustments,
-      sampleCount: state.samples.length,
-      latest: state.samples.length ? structuredCloneSafe(state.samples[state.samples.length - 1]) : null
+      fixedTick: channel.clock.tick,
+      liveTime: channel.liveTime,
+      maxAbsResourceDrift: channel.maxAbsResourceDrift,
+      strictZeroResourceDrift: channel.initialized && channel.maxAbsResourceDrift <= this.resourceTolerance,
+      externalResourceAdjustments: channel.externalResourceAdjustments,
+      sampleCount: channel.samples.length,
+      latest: channel.samples.length ? structuredCloneSafe(channel.samples[channel.samples.length - 1]) : null
     };
   }
 
   exportReceipt() {
-    const sides = Object.fromEntries(Object.keys(this.sides).map(side => [side, this.sideReport(side)]));
-    const initialized = Object.values(sides).filter(side => side.initialized);
+    const channels = Object.fromEntries(Object.keys(this.channels).map(id => [id, this.channelReport(id)]));
+    const measured = Object.values(channels).filter(channel => channel?.initialized);
     return {
       schema: "axm-rts-economy-drift/v1",
       authority: "shadow-only",
       authorityTransferred: false,
       tickRate: this.tickRate,
       resourceTolerance: this.resourceTolerance,
-      status: initialized.length ? "measured" : "unmeasured",
-      strictZeroResourceDrift: initialized.length > 0 && initialized.every(side => side.strictZeroResourceDrift),
-      note: "The shadow runs the shared economy at fixed 20 Hz while the live game remains variable-step. External spends/rewards are mirrored before drift comparison so the receipt isolates economy timing/integration differences rather than player purchases.",
-      sides
+      status: measured.length ? "measured" : "unmeasured",
+      strictZeroResourceDrift: measured.length > 0 && measured.every(channel => channel.strictZeroResourceDrift),
+      channelNaming: "Current Skirmish evaluates player income before enemy income; first two observed resource objects are labelled player and enemy. Extra streams remain generic.",
+      note: "The fixed-step shadow receives the same changing economy snapshots as the live variable-step economy. External spends and rewards between economy ticks are mirrored before comparison so they are not misreported as economy drift.",
+      channels
     };
   }
 }
@@ -210,6 +182,8 @@ export function createEconomyDriftProbe(options = {}) {
 }
 
 export const skirmishEconomyDriftProbe = createEconomyDriftProbe({ tickRate: 20, maxSamples: 600, resourceTolerance: 1e-8 });
+
+registerIncomeTickObserver(event => skirmishEconomyDriftProbe.observeIncomeTick(event));
 
 if (typeof window !== "undefined") {
   Object.defineProperty(window, "__AXM_RTS_ECONOMY_DRIFT__", {
