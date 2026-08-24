@@ -44,6 +44,10 @@ For every live economy tick it receives the same changing snapshot used by the r
 
 The shadow integrates those snapshots at 20 Hz while the current game continues to integrate at the render-frame `dt`.
 
+This phase deliberately uses the **live workforce snapshot** at each observation rather than independently simulating population growth. The question being measured here is narrower: does changing the integration cadence alter the resource result when both systems receive the same evolving economy inputs?
+
+Independent fixed-step population authority is a later experiment.
+
 The comparison projects the fixed-step remainder to the current live time so ordinary sub-tick accumulator lag is not misreported as semantic drift.
 
 ### External mutation isolation
@@ -105,6 +109,7 @@ Real-match evidence must come from an actual browser play session using `window.
 
 - live economy authority: **unchanged / variable-step**;
 - fixed-step economy: **shadow only**;
+- fixed-step population growth: **not authoritative / not independently simulated in this phase**;
 - default randomness: **native per-run**;
 - global RNG override: **none**;
 - replay authority: **observer only**;
@@ -120,10 +125,10 @@ Run a real browser match and deliberately exercise changing economy inputs:
 - advance ages;
 - research Efficient Supply;
 - spend resources on structures and formations;
-- allow population growth to occur.
+- allow population growth to change the live workforce snapshots.
 
 Then export the drift receipt.
 
 If drift is non-zero, keep the shadow non-authoritative and use the samples to locate which transition produces it.
 
-If drift remains effectively zero across those transitions, the next experiment may add an **explicit opt-in** fixed-step economy authority mode. It should not replace default gameplay until that mode is separately browser-tested and compared against the current behavior.
+If drift remains effectively zero across those transitions, the next experiment may add an **explicit opt-in** fixed-step economy authority mode together with an independently simulated population clock. It should not replace default gameplay until that mode is separately browser-tested and compared against the current behavior.
