@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { Canvas2DRenderer } from "./canvas2dRenderer.js";
 
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -28,7 +29,14 @@ export class RTSWorld {
     this.scene.background = new THREE.Color(0x8eb4c4);
     this.scene.fog = new THREE.FogExp2(0x8eb4c4, .0105);
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+    try {
+      this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+      this.presentationMode = "webgl";
+    } catch (error) {
+      console.warn("AXM RTS: WebGL unavailable; activating Canvas 2D presentation fallback.", error);
+      this.renderer = new Canvas2DRenderer(() => this);
+      this.presentationMode = "canvas2d";
+    }
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
