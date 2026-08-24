@@ -1,6 +1,8 @@
 import { factionStats } from "./matchStatsStore.js";
 
 let timer = null;
+let observer = null;
+let observedPanel = null;
 
 function esc(value) {
   return String(value ?? "").replace(/[&<>\"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char]));
@@ -39,6 +41,22 @@ function targetPanel() {
   return null;
 }
 
+function watchPanel(panel) {
+  if (!panel || (observer && observedPanel === panel)) return;
+  observer?.disconnect();
+  observedPanel = panel;
+  observer = new MutationObserver(() => {
+    if (!panel.isConnected) {
+      observer?.disconnect();
+      observer = null;
+      observedPanel = null;
+      return;
+    }
+    if (!panel.querySelector(".axm-faction-history")) queueMicrotask(render);
+  });
+  observer.observe(panel, { childList: true, subtree: true });
+}
+
 function render() {
   const panel = targetPanel();
   const factionIds = humanFactionIds();
@@ -59,6 +77,7 @@ function render() {
     const rate = row.matches ? Math.round(row.winRate * 100) : 0;
     return `<div class="row"><b>${esc(row.factionName)}</b> • ${row.matches} match${row.matches === 1 ? "" : "es"} • ${row.wins}W / ${row.losses}L • ${rate}% wins</div>`;
   }).join("")}</div>`;
+  watchPanel(panel);
   return true;
 }
 
