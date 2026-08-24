@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#07111a" />
+  <title>AXM Many-Race RTS — Faction Chronicle</title>
+  <link rel="stylesheet" href="faction-stats.css" />
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar glass">
+      <div class="identity">
+        <a class="mark" href="./index.html">AXM</a>
+        <div><div class="eyebrow">LOCAL CAREER LEDGER</div><h1>Faction Chronicle</h1><p>Completed-match history grouped by the faction that actually played.</p></div>
+      </div>
+      <nav><a href="./factions.html">Faction Hall</a><a href="./index.html">Main menu</a></nav>
+    </header>
+
+    <main>
+      <section class="intro glass">
+        <div>
+          <div class="eyebrow">MATCH-FIRST • FACTION-LINKED • NO TELEMETRY</div>
+          <h2>Your factions remember the matches.</h2>
+          <p>Career totals are rebuilt from bounded completed-match receipts. Human, Faction AI and Connected AI participation stay separate, and mode-specific values only appear when they were actually recorded.</p>
+        </div>
+        <button id="exportBtn" type="button">Export local JSON</button>
+      </section>
+
+      <section class="overview" aria-label="Career overview">
+        <div class="stat-card glass"><span>Tracked matches</span><b id="trackedMatches">0</b></div>
+        <div class="stat-card glass"><span>Factions used</span><b id="factionsUsed">0</b></div>
+        <div class="stat-card glass"><span>Favorite faction</span><b id="favoriteFaction">—</b></div>
+        <div class="stat-card glass"><span>Tracked time</span><b id="trackedTime">0:00</b></div>
+      </section>
+
+      <section class="controls glass" aria-label="Chronicle filters">
+        <label>Controller
+          <select id="controllerFilter">
+            <option value="human">Human</option>
+            <option value="all">All controllers</option>
+            <option value="faction-ai">Faction AI</option>
+            <option value="connected-ai">Connected AI</option>
+          </select>
+        </label>
+        <label>Mode
+          <select id="modeFilter">
+            <option value="all">All modes</option>
+            <option value="skirmish">Skirmish</option>
+            <option value="defend-workshop">Defend the Workshop</option>
+          </select>
+        </label>
+        <label>Order factions by
+          <select id="sortFilter">
+            <option value="matches">Matches played</option>
+            <option value="wins">Wins</option>
+            <option value="win-rate">Win rate</option>
+            <option value="damage">Damage</option>
+            <option value="time">Play time</option>
+          </select>
+        </label>
+        <div class="storage-state"><span>Persistence</span><b id="storageState">CHECKING</b><small>Browser-local only • latest 300 receipts</small></div>
+      </section>
+
+      <section class="section-block">
+        <div class="section-head"><div><div class="eyebrow">FACTION CAREERS</div><h2>Long-term faction record</h2></div><span id="filterSummary">Human • all modes</span></div>
+        <div id="emptyState" class="empty glass hidden"><b>No recorded matches for this filter yet.</b><span>Finish a Skirmish or Defend the Workshop run and it will appear here.</span></div>
+        <div id="factionGrid" class="faction-grid"></div>
+      </section>
+
+      <section class="section-block">
+        <div class="section-head"><div><div class="eyebrow">RECENT RECEIPTS</div><h2>Completed match history</h2></div><span>Newest first</span></div>
+        <div class="table-wrap glass">
+          <table>
+            <thead><tr><th>When</th><th>Mode</th><th>Faction / seat</th><th>Result</th><th>Context</th><th>Time</th><th>Field damage</th></tr></thead>
+            <tbody id="recentMatches"><tr><td colspan="7">No match receipts yet.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="glass">
+      <span id="ledgerNote">Faction Chronicle reads <code>axm.rts.matchStats.v1</code> from this browser profile. Nothing is uploaded.</span>
+      <a href="./index.html">Return to war table</a>
+    </footer>
+  </div>
+  <script type="module" src="src/factionChronicle.js"></script>
+</body>
+</html>
