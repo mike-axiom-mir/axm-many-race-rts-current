@@ -1,4 +1,5 @@
 import "./core/foundationBootstrap.js";
+import "./core/skirmishFoundationBridge.js";
 import "./selectedMapPatch.js";
 import "./defenseRosterRegistryPatch.js";
 import "./scoutRegistryPatch.js";
