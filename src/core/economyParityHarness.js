@@ -11,11 +11,10 @@ import {
 
 function legacyIncomeRate({ faction, workforce, allocation, age, buildings = [], territoryBonus = {}, upgradeLevels = {} }) {
   const ageMult = AGE_DATA[age].multiplier;
-  const shares = normalizeAllocation(allocation);
   const upgradeMult = incomeUpgradeMultiplier(upgradeLevels);
   const rate = {};
   for (const key of RESOURCE_KEYS) {
-    let gain = workforce * shares[key] * BASE_INCOME[key] * (faction.economy[key] || 1) * ageMult;
+    let gain = workforce * allocation[key] * BASE_INCOME[key] * (faction.economy[key] || 1) * ageMult;
     for (const building of buildings) {
       if (!building.parent || building.userData.hp <= 0) continue;
       const def = faction.buildings.find(item => item.id === building.userData.id);
@@ -45,7 +44,7 @@ function fixedStepCase() {
   const input = {
     faction: FACTIONS.greenwake,
     workforce: 27,
-    allocation: { food: 35, wood: 30, stone: 15, gold: 20 },
+    allocation: normalizeAllocation({ food: 35, wood: 30, stone: 15, gold: 20 }),
     age: 1,
     buildings: [building("greenwake-grove"), building("greenwake-muster", "military")],
     territoryBonus: { food: .18, wood: .12 },
@@ -84,7 +83,7 @@ export function runEconomyParitySuite() {
     rateCase("Ironvale founding economy", {
       faction: FACTIONS.ironvale,
       workforce: 20,
-      allocation: { food: 30, wood: 30, stone: 20, gold: 20 },
+      allocation: normalizeAllocation({ food: 30, wood: 30, stone: 20, gold: 20 }),
       age: 0,
       buildings: [],
       territoryBonus: {},
@@ -102,7 +101,7 @@ export function runEconomyParitySuite() {
     rateCase("Northpole late economy with multiple districts", {
       faction: FACTIONS.northpole,
       workforce: 35,
-      allocation: { food: 45, wood: 25, stone: 15, gold: 15 },
+      allocation: normalizeAllocation({ food: 45, wood: 25, stone: 15, gold: 15 }),
       age: 2,
       buildings: [building("storehouse"), building("storehouse"), building("workshop", "military")],
       territoryBonus: { food: .12, stone: .25, gold: .4 },
