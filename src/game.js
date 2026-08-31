@@ -4,6 +4,11 @@ import { AGE_DATA, FACTIONS, RESOURCE_KEYS, getFactionList } from "./factions.js
 import { DEFAULT_MAP } from "./maps.js";
 import { MapDirector } from "./mapDirector.js";
 import {
+  advancePopulationClock,
+  applyIncomeTick,
+  calculateIncomeRate
+} from "./core/economySystem.js";
+import {
   availabilityText,
   buildingAvailability,
   buildingAvailabilityText,
@@ -16,7 +21,6 @@ import {
   availableUpgradeOptions,
   buildingHealthUpgradeMultiplier,
   formationUpgradeMultiplier,
-  incomeUpgradeMultiplier,
   towerDamageUpgradeMultiplier,
   upgradeHubBuilding,
   upgradeRequirementText
@@ -31,7 +35,6 @@ const ui = {
   state: $("strategyState"), age: $("ageBadge"), placement: $("placementHint"), toast: $("toast"), restart: $("restartBtn")
 };
 
-const BASE_INCOME = { food: .78, wood: .68, stone: .48, gold: .44 };
 const RESOURCE_LABELS = { food: "Food", wood: "Wood", stone: "Stone", gold: "Gold" };
 const RESOURCE_ICONS = { food: "◆", wood: "♣", stone: "⬢", gold: "●" };
 const ACTIVE_MAP = DEFAULT_MAP;
@@ -223,12 +226,12 @@ function trainUnit(def) {
 
 function commandArmy(command){if(!state.started||state.ended)return;if(command==="defend"){world.command("player",PLAYER_HOME.clone().add(new THREE.Vector3(6,0,5)));toast("Army doctrine: defend the homeland.");}else if(command==="center"){world.command("player",mapDirector.objectiveFor("player"));toast("Army doctrine: secure the next strategic site.");}else if(command==="attack"){world.command("player",state.enemyCapital?.position?.clone?.()||ENEMY_HOME.clone());toast("Army doctrine: pressure the enemy capital.");}}
 
-function incomeRateFor({faction,workforce,allocation,age,buildings,owner,upgradeLevels={}}){const ageMult=AGE_DATA[age].multiplier,territoryBonus=mapDirector.incomeBonus(owner),upgradeMult=incomeUpgradeMultiplier(upgradeLevels),rate={};for(const key of RESOURCE_KEYS){let gain=workforce*allocation[key]*BASE_INCOME[key]*(faction.economy[key]||1)*ageMult;for(const building of buildings){if(!building.parent||building.userData.hp<=0)continue;const def=faction.buildings.find(item=>item.id===building.userData.id);gain+=def?.income?.[key]||0;}gain+=(territoryBonus[key]||0)*ageMult;rate[key]=gain*upgradeMult;}return rate;}
+function incomeRateFor({faction,workforce,allocation,age,buildings,owner,upgradeLevels={}}){return calculateIncomeRate({faction,workforce,allocation,age,buildings,territoryBonus:mapDirector.incomeBonus(owner),upgradeLevels});}
 function playerIncomeRate(){return incomeRateFor({faction:state.faction,workforce:state.workforce,allocation:allocationShares(),age:state.age,buildings:state.buildings,owner:"player",upgradeLevels:state.upgradeLevels});}
-function economyTick(dt){const rates=playerIncomeRate();for(const key of RESOURCE_KEYS)state.resources[key]+=rates[key]*dt;state.workforceClock+=dt;const ecoCount=state.buildings.filter(b=>b.parent&&b.userData.role==="economy").length;const growthInterval=Math.max(26,48-ecoCount*5);if(state.workforceClock>=growthInterval){state.workforceClock=0;state.workforce++;toast("Population growth added one workforce unit.");}}
+function economyTick(dt){const rates=playerIncomeRate();applyIncomeTick(state.resources,rates,dt);const population=advancePopulationClock({clock:state.workforceClock,dt,buildings:state.buildings,side:"player"});state.workforceClock=population.clock;if(population.growth){state.workforce+=population.growth;toast("Population growth added one workforce unit.");}}
 function processMapState(dt){mapDirector.update(dt,state.elapsed);state.frontier=mapDirector.centralOwner();for(const event of mapDirector.drainEvents()){if(event.owner==="player")toast(`${event.site.name} secured — its resource bonus is now yours.`,"good");else if(event.owner==="enemy")toast(`${event.site.name} fell under enemy control.`,"bad");else if(event.previous==="player")toast(`${event.site.name} has slipped back to neutral.`,"bad");}}
 
-function enemyEconomyTick(dt){const e=state.enemy,rates=incomeRateFor({faction:state.enemyFaction,workforce:e.workforce,allocation:e.allocation,age:e.age,buildings:e.buildings,owner:"enemy",upgradeLevels:e.upgradeLevels});for(const key of RESOURCE_KEYS)e.resources[key]+=rates[key]*dt;e.workforceClock+=dt;const eco=e.buildings.filter(b=>b.parent&&b.userData.role==="economy").length;const interval=Math.max(27,49-eco*5);if(e.workforceClock>=interval){e.workforceClock=0;e.workforce++;}}
+function enemyEconomyTick(dt){const e=state.enemy,rates=incomeRateFor({faction:state.enemyFaction,workforce:e.workforce,allocation:e.allocation,age:e.age,buildings:e.buildings,owner:"enemy",upgradeLevels:e.upgradeLevels});applyIncomeTick(e.resources,rates,dt);const population=advancePopulationClock({clock:e.workforceClock,dt,buildings:e.buildings,side:"enemy"});e.workforceClock=population.clock;if(population.growth)e.workforce+=population.growth;}
 function enemyBuildPoint(role){const rings=[[8,-7],[9,7],[13,-2],[13,11],[16,-10],[18,5],[10,15],[20,14],[23,-4],[22,-15]];for(let o=0;o<rings.length;o++){const i=(state.enemy.buildSerial+o)%rings.length,[toward,z]=rings[i],point=ENEMY_HOME.clone().add(new THREE.Vector3(-toward,0,z));if(role==="defense")point.x+=2;if(point.x<8||Math.abs(point.z)>32)continue;if(!strategicFootprintClear(point)||!structureFootprintClear(point,2.7))continue;state.enemy.buildSerial=i+1;return point;}return null;}
 function enemyBuildTick(dt){const e=state.enemy;e.buildClock+=dt;if(e.buildClock<6.5)return;e.buildClock=0;e.buildings=e.buildings.filter(b=>b.parent&&b.userData.hp>0);const def=chooseEnemyBuilding(state.enemyFaction,e.buildings,e.age);if(!def)return;const cap=5+e.age*2;if(e.buildings.length>=cap)return;const cost=scaledCost(def.cost,state.enemyFaction.building.cost);if(!canAfford(cost,e.resources))return;const point=enemyBuildPoint(def.role);if(!point)return;spend(cost,e.resources);const building=applyBuildingUpgrades(world.spawnBuilding(def,state.enemyFaction,point,true),e.upgradeLevels);e.buildings.push(building);if(def.role==="economy")e.workforce+=3;}
 function enemyAgeTick(dt){const e=state.enemy;if(e.age>=AGE_DATA.length-1)return;e.ageClock+=dt;if(e.ageClock<8)return;e.ageClock=0;const next=AGE_DATA[e.age+1],penalty=state.enemyFaction.id==="fatfrotz"?1.18:1,cost=scaledCost(next.cost,penalty);if(!spend(cost,e.resources))return;e.age++;e.workforce+=4;toast(`${state.enemyFaction.name} has reached ${AGE_DATA[e.age].name}.`,"bad");}
@@ -252,4 +255,4 @@ function renderHud(){if(!state.started)return;ui.age.textContent=AGE_DATA[state.
 function simulate(dt){if(!state.started||state.ended)return;state.elapsed+=dt;processMapState(dt);economyTick(dt);enemyTick(dt);state.hudClock+=dt;if(state.hudClock>=.35){state.hudClock=0;renderHud();}}
 
 for(const btn of document.querySelectorAll("[data-command]"))btn.addEventListener("click",()=>commandArmy(btn.dataset.command));ui.restart.addEventListener("click",()=>location.reload());window.addEventListener("keydown",event=>{if(event.key==="Escape"&&state.placement){state.placement=null;ui.placement.classList.add("hidden");toast("Construction placement cancelled.");}});
-renderFactionCards();let last=performance.now()/1000;function frame(ms){const now=ms/1000,dt=Math.min(.05,Math.max(0,now-last));last=now;simulate(dt);world.tick(now,dt);requestAnimationFrame(frame);}requestAnimationFrame(frame);
+renderFactionCards();let last=performance.now()/1000;function frame(ms){const now=ms/1000,elapsed=Math.min(world.presentationMode==="canvas2d"?1.25:.05,Math.max(0,now-last));last=now;if(world.presentationMode==="canvas2d"){let remaining=elapsed;while(remaining>.0001){const dt=Math.min(.05,remaining);simulate(dt);world.tick(now,dt);remaining-=dt;}}else{simulate(elapsed);world.tick(now,elapsed);}requestAnimationFrame(frame);}requestAnimationFrame(frame);
