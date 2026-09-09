@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "src/dominationBattleAdapter.js"
+      - "src/dominationResultContract.js"
       - "tests/domination-battle-result-contract.test.mjs"
       - ".github/workflows/domination-result-contract.yml"
   workflow_dispatch:
@@ -25,6 +26,8 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - name: Syntax check changed trust boundary
-        run: node --check src/dominationBattleAdapter.js
+        run: |
+          node --check src/dominationResultContract.js
+          node --check src/dominationBattleAdapter.js
       - name: Run domination result contract regressions
         run: node --test tests/domination-battle-result-contract.test.mjs
