@@ -2,10 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  applyDominationBattleResult,
   createDominationBattleResult,
-  validateDominationBattleResult
-} from "../src/dominationBattleAdapter.js";
+  validateDominationBattleResult,
+  withValidatedDominationBattleResult
+} from "../src/dominationResultContract.js";
 
 function stagedPacket() {
   return {
@@ -125,33 +125,20 @@ test("rejects unknown cities and owners outside the staged sides", () => {
   assert.ok(codes.includes("RESULT_CITY_UNKNOWN"));
 });
 
-test("invalid result is rejected before canonical saved match is read or mutated", () => {
+test("invalid result cannot cross the canonical-state callback boundary", () => {
   const packet = stagedPacket();
   const result = validAttackerResult(packet);
   result.attackerSurvivors = [
     { factionId: "northpole", unitId: "line", count: 999999, veterancy: 0 }
   ];
 
-  let storageReads = 0;
-  globalThis.localStorage = {
-    getItem() {
-      storageReads += 1;
-      throw new Error("persistence boundary must not be crossed");
-    },
-    setItem() {
-      throw new Error("persistence boundary must not be crossed");
-    },
-    removeItem() {
-      throw new Error("persistence boundary must not be crossed");
-    }
-  };
+  let admittedCallbacks = 0;
+  const applied = withValidatedDominationBattleResult(packet, result, () => {
+    admittedCallbacks += 1;
+    return { ok: true };
+  });
 
-  try {
-    const applied = applyDominationBattleResult(packet, result);
-    assert.equal(applied.ok, false);
-    assert.ok(applied.errors.some(error => error.startsWith("RESULT_SURVIVOR_COUNT_EXCEEDS_STAGED:")));
-    assert.equal(storageReads, 0);
-  } finally {
-    delete globalThis.localStorage;
-  }
+  assert.equal(applied.ok, false);
+  assert.ok(applied.errors.some(error => error.startsWith("RESULT_SURVIVOR_COUNT_EXCEEDS_STAGED:")));
+  assert.equal(admittedCallbacks, 0);
 });
