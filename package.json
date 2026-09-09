@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "test:syntax": "node tools/check-js-syntax.mjs",
+    "test:model": "node tests/army-order-feedback-model.test.mjs",
     "test:browser": "playwright test"
   },
   "devDependencies": {
