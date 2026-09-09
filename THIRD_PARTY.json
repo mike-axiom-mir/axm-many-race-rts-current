@@ -19,6 +19,19 @@
       "canonical_state_owner": "AXM",
       "replacement_boundary": "renderer/runtime library boundary",
       "follow_up": "Vendor and pin the exact Three.js build for fully offline redistribution; preserve the upstream license notice."
+    },
+    {
+      "id": "playwright-test",
+      "kind": "test-library",
+      "role": "ci-only-browser-runtime-verification",
+      "source": "https://github.com/microsoft/playwright",
+      "version": "1.62.1",
+      "license": "Apache-2.0",
+      "license_verified": true,
+      "redistribution": "development-dependency-only",
+      "canonical_state_owner": "Microsoft",
+      "replacement_boundary": "browser verification harness",
+      "follow_up": "Keep the browser runner pinned and update deliberately with a passing runtime gate."
     }
   ]
 }
