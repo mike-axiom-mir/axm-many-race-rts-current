@@ -60,6 +60,37 @@ test("identity validator rejects blank/non-string IDs without normalizing them i
   });
 });
 
+test("a rejected replacement load leaves the previous runtime state untouched", () => {
+  const engine = new ScenarioRuleEngine();
+  engine.load({
+    variables: { durable: 7 },
+    globalRules: [
+      { id: "durable-rule", event: { type: "manual" }, actions: [variableAdd("durable")] }
+    ]
+  });
+  engine.emit("manual");
+
+  const priorRules = engine.rules;
+  const priorVariables = engine.variables;
+  const priorQueue = [...engine.queue];
+
+  assert.throws(
+    () => engine.load({
+      variables: { replacement: 1 },
+      globalRules: [
+        { id: "collision", event: { type: "manual" }, actions: [] },
+        { id: "collision", event: { type: "manual" }, actions: [] }
+      ]
+    }),
+    error => error?.code === "RULE_IDENTITY_INVALID"
+  );
+
+  assert.equal(engine.rules, priorRules);
+  assert.equal(engine.variables, priorVariables);
+  assert.deepEqual(engine.variables, { durable: 7 });
+  assert.deepEqual(engine.queue, priorQueue);
+});
+
 test("unique rule identities preserve existing once and repeat behavior", () => {
   const engine = new ScenarioRuleEngine();
   engine.load({
