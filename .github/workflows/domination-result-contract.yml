@@ -1,0 +1,30 @@
+name: Domination result contract
+
+on:
+  pull_request:
+    paths:
+      - "src/dominationBattleAdapter.js"
+      - "tests/domination-battle-result-contract.test.mjs"
+      - ".github/workflows/domination-result-contract.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  result-admission:
+    name: Node ${{ matrix.node }} result admission
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Syntax check changed trust boundary
+        run: node --check src/dominationBattleAdapter.js
+      - name: Run domination result contract regressions
+        run: node --test tests/domination-battle-result-contract.test.mjs
