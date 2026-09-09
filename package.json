@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test:syntax": "node tools/check-js-syntax.mjs",
     "test:browser": "playwright test"
   },
   "devDependencies": {
