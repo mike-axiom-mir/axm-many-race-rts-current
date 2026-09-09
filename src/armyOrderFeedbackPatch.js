@@ -246,6 +246,7 @@ window.addEventListener("keydown", event => {
   const button = document.querySelector(`[data-command="${entry[0]}"]`);
   if (!button || button.disabled || button.closest(".hidden")) return;
   event.preventDefault();
+  button.focus();
   button.click();
 });
 
