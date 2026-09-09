@@ -1,0 +1,122 @@
+name: Forge asset request bridge
+
+on:
+  pull_request:
+    paths:
+      - "src/forgeAssetRequest.js"
+      - "tools/export-forge-unit-request.mjs"
+      - "tests/forge-asset-request-contract.test.mjs"
+      - "docs/FORGE_ASSET_REQUEST_BRIDGE.md"
+      - ".github/workflows/forge-asset-request-bridge.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prove-request-roundtrip:
+    name: Node ${{ matrix.node }} / Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - node: "20"
+            python: "3.11"
+          - node: "22"
+            python: "3.13"
+    env:
+      PROVIDER_REF: ec6abc19b00365f40a0b1ec48eff760d75283e1f
+      CONSUMER_REF: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Check out RTS consumer
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Run focused consumer regressions
+        run: node --experimental-default-type=module --test tests/forge-asset-request-contract.test.mjs
+
+      - name: Export a real built-in RTS unit pack
+        run: |
+          node --experimental-default-type=module --input-type=module <<'NODE'
+          import { writeFileSync } from "node:fs";
+          import { unitPackFrom } from "./src/contentPacks.js";
+          const pack = unitPackFrom("northpole");
+          if (!pack || pack.kind !== "unit-pack") throw new Error("northpole unit pack unavailable");
+          writeFileSync(`${process.env.RUNNER_TEMP}/northpole-unit-pack.json`, `${JSON.stringify(pack, null, 2)}\n`);
+          NODE
+
+      - name: Export pinned Forge request and receipt
+        run: |
+          node --experimental-default-type=module tools/export-forge-unit-request.mjs \
+            --unit-pack "$RUNNER_TEMP/northpole-unit-pack.json" \
+            --unit guard \
+            --asset-type character \
+            --unit-meters 1.82 \
+            --source-ref "$CONSUMER_REF" \
+            --provider-ref "$PROVIDER_REF" \
+            --output "$RUNNER_TEMP/forge-request.json" \
+            --receipt "$RUNNER_TEMP/forge-request-receipt.json"
+
+      - name: Check out pinned Game Asset Forge provider
+        uses: actions/checkout@v4
+        with:
+          repository: mike-axiom-mir/Axm-game-assets
+          ref: ${{ env.PROVIDER_REF }}
+          path: _provider/game-assets
+
+      - name: Verify provider identity and contract
+        run: |
+          test "$(git -C _provider/game-assets rev-parse HEAD)" = "$PROVIDER_REF"
+          python _provider/game-assets/forge.py self-test
+          python _provider/game-assets/forge.py init "$RUNNER_TEMP/forge-request.json" "$RUNNER_TEMP/forge-output"
+          python _provider/game-assets/forge.py audit "$RUNNER_TEMP/forge-output/genome.json"
+
+      - name: Verify exact request-to-genome provenance roundtrip
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          temp = Path(os.environ["RUNNER_TEMP"])
+          request = json.loads((temp / "forge-request.json").read_text(encoding="utf-8"))
+          receipt = json.loads((temp / "forge-request-receipt.json").read_text(encoding="utf-8"))
+          genome = json.loads((temp / "forge-output" / "genome.json").read_text(encoding="utf-8"))
+
+          canonical = json.dumps(request, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+          request_digest = "sha256:" + hashlib.sha256(canonical.encode()).hexdigest()
+
+          assert receipt["status"] == "REQUEST_READY"
+          assert receipt["authority"] == "REQUEST_ONLY"
+          assert receipt["request_digest"] == request_digest
+          assert receipt["provider_contract"]["ref"] == os.environ["PROVIDER_REF"]
+          assert receipt["source"]["ref"] == os.environ["CONSUMER_REF"]
+          assert receipt["truth_boundary"]["runtime_adoption_authority"] is False
+          assert receipt["truth_boundary"]["merge_authority"] is False
+          assert receipt["truth_boundary"]["canon_authority"] is False
+
+          assert genome["genome_version"] == "0.1.0"
+          assert genome["asset"] == request["asset"]
+          assert genome["targets"] == request["targets"]
+          assert genome["budgets"] == request["budgets"]
+          assert genome["quality"] == request["quality"]
+          assert genome["variants"] == request["variants"]
+          assert genome["provenance"]["request_digest"] == request_digest
+          assert genome["provenance"]["sources"] == request["sources"]
+          assert genome["pipeline"]["status"] == "initialized"
+          assert genome["source_state"]["canonical_stage"] == "intake"
+          assert genome["source_state"]["artifacts"] == []
+          print("FORGE ROUNDTRIP PASS")
+          PY
