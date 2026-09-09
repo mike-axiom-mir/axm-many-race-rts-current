@@ -230,10 +230,11 @@ RTSWorld.prototype.resetDynamic = function armyOrderFeedbackReset() {
 document.addEventListener("click", event => {
   const button = event.target?.closest?.("[data-command]");
   if (!button || !DOCTRINES[button.dataset.command]) return;
-  pendingDoctrine = { command: button.dataset.command, time: performance.now() };
-  queueMicrotask(() => {
-    if (pendingDoctrine?.command === button.dataset.command) pendingDoctrine = null;
-  });
+  const pending = { command: button.dataset.command, time: performance.now() };
+  pendingDoctrine = pending;
+  setTimeout(() => {
+    if (pendingDoctrine === pending) pendingDoctrine = null;
+  }, 0);
 }, true);
 
 window.addEventListener("keydown", event => {
