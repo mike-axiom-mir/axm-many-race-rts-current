@@ -1,0 +1,82 @@
+name: Foundation Planet surface bridge
+
+on:
+  pull_request:
+    paths:
+      - "src/foundationPlanetSurfaceBridge.js"
+      - "integrations/foundation-planet-surface.json"
+      - "tests/foundation-planet-surface-bridge.test.mjs"
+      - "tests/foundation-planet-surface-real-provider.test.mjs"
+      - "docs/FOUNDATION_PLANET_SURFACE_BRIDGE.md"
+      - ".github/workflows/foundation-planet-surface-bridge.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  consumer-contract:
+    name: Consumer contract / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["20", "22"]
+    steps:
+      - name: Check out RTS consumer
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Check adapter syntax
+        run: node --experimental-default-type=module --check src/foundationPlanetSurfaceBridge.js
+      - name: Run focused fail-closed regressions
+        run: node --experimental-default-type=module --test tests/foundation-planet-surface-bridge.test.mjs
+
+  real-provider-roundtrip:
+    name: Installed provider → current RTS map schema
+    runs-on: ubuntu-latest
+    env:
+      PROVIDER_REF: 8f4e543669141acf93c61d44cf3827b1240e76f0
+    steps:
+      - name: Check out RTS consumer
+        uses: actions/checkout@v4
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check out exact Foundation Planet provider
+        uses: actions/checkout@v4
+        with:
+          repository: mike-axiom-mir/foundation-planet-experiments
+          ref: ${{ env.PROVIDER_REF }}
+          path: _provider/foundation-planet
+      - name: Verify provider head and provider-owned package regressions
+        run: |
+          test "$(git -C _provider/foundation-planet rev-parse HEAD)" = "$PROVIDER_REF"
+          (cd _provider/foundation-planet && node --test tests/foundation-planet-sampler-package.test.mjs)
+      - name: Pack and install only the reviewed provider locally
+        run: |
+          mkdir -p "$RUNNER_TEMP/provider-dist"
+          npm pack ./_provider/foundation-planet/packages/foundation-planet-sampler --pack-destination "$RUNNER_TEMP/provider-dist"
+          printf '{"private":true,"type":"module"}\n' > package.json
+          npm install --offline --ignore-scripts --no-audit --no-fund "$RUNNER_TEMP/provider-dist/axm-foundation-planet-sampler-1.0.0.tgz"
+      - name: Provide an offline Three.js contract stub for Node schema validation
+        run: |
+          mkdir -p node_modules/three
+          cat > node_modules/three/package.json <<'JSON'
+          {"name":"three","version":"0.0.0-axm-test-stub","type":"module","exports":"./index.js"}
+          JSON
+          cat > node_modules/three/index.js <<'JS'
+          export const MathUtils = {
+            degToRad: value => value * Math.PI / 180,
+            radToDeg: value => value * 180 / Math.PI
+          };
+          export class Vector3 {
+            constructor(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; }
+            length() { return Math.hypot(this.x, this.y, this.z); }
+          }
+          JS
+      - name: Prove installed-provider receipt → proposal → real map admission
+        run: node --test tests/foundation-planet-surface-real-provider.test.mjs

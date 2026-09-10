@@ -1,0 +1,37 @@
+{
+  "schema": "axm.rts.integration/v1",
+  "id": "axm.rts.foundation-planet-surface-bridge",
+  "status": "EXPERIMENTAL",
+  "consumer": {
+    "repository": "mike-axiom-mir/axm-many-race-rts-current",
+    "base": "790e8969549321afcd7c2fe76bddc31ab3d8c995",
+    "mapSchema": 2,
+    "projection": "globe",
+    "collection": "surfacePaint"
+  },
+  "provider": {
+    "repository": "mike-axiom-mir/foundation-planet-experiments",
+    "pullRequest": 9,
+    "head": "8f4e543669141acf93c61d44cf3827b1240e76f0",
+    "package": "axm-foundation-planet-sampler",
+    "capability": "axm.foundation-planet.coordinate-sampler",
+    "version": "1.0.0",
+    "underlyingModelRevision": "b838933c0cf13b03add15bad9757a75a380d2173"
+  },
+  "bridge": {
+    "input": "axm.foundation-planet.sample-receipt/v1",
+    "output": "axm.rts.foundation-planet-surface-proposal/v1",
+    "requiresProviderReplayVerification": true,
+    "preservesCoordinates": true,
+    "projectsBiomeToExistingRtsSurfaceSkin": true,
+    "appliesAutomatically": false
+  },
+  "authority": {
+    "providerExecution": false,
+    "automaticApplication": false,
+    "gameplay": false,
+    "canonical": false,
+    "merge": false,
+    "canon": false
+  }
+}
