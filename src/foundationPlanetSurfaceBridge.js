@@ -1,15 +1,46 @@
 export const FOUNDATION_PLANET_SURFACE_BRIDGE_SCHEMA = "axm.rts.foundation-planet-surface-proposal/v1";
-export const FOUNDATION_PLANET_PROVIDER = Object.freeze({
+
+export const FOUNDATION_PLANET_PROVIDER_V1_0 = Object.freeze({
   repository: "mike-axiom-mir/foundation-planet-experiments",
   pullRequest: 9,
   head: "8f4e543669141acf93c61d44cf3827b1240e76f0",
   package: "axm-foundation-planet-sampler",
+  packageVersion: "0.1.0",
   capability: "axm.foundation-planet.coordinate-sampler",
   version: "1.0.0",
   requestSchema: "axm.foundation-planet.sample-request/v1",
   receiptSchema: "axm.foundation-planet.sample-receipt/v1",
   verificationSchema: "axm.foundation-planet.sample-verification/v1",
-  worldId: "world.axm.foundation-planet"
+  worldId: "world.axm.foundation-planet",
+  coordinateIdentity: null
+});
+
+export const FOUNDATION_PLANET_PROVIDER_V1_1 = Object.freeze({
+  repository: "mike-axiom-mir/foundation-planet-experiments",
+  pullRequest: 11,
+  head: "d04a47289cdf6ed9f38b65fa989965504eee7e3e",
+  package: "axm-foundation-planet-sampler",
+  packageVersion: "0.2.0",
+  capability: "axm.foundation-planet.coordinate-sampler",
+  version: "1.1.0",
+  requestSchema: "axm.foundation-planet.sample-request/v1",
+  receiptSchema: "axm.foundation-planet.sample-receipt/v1",
+  verificationSchema: "axm.foundation-planet.sample-verification/v1",
+  worldId: "world.axm.foundation-planet",
+  coordinateIdentity: Object.freeze({
+    angularUnit: "decimal-degrees",
+    latitudeRange: "[-90, 90]",
+    longitudeRange: "[-180, 180)",
+    antimeridianLongitude: -180,
+    poleLongitude: 0,
+    signedZero: "positive"
+  })
+});
+
+export const FOUNDATION_PLANET_PROVIDER = FOUNDATION_PLANET_PROVIDER_V1_1;
+export const FOUNDATION_PLANET_SUPPORTED_PROVIDERS = Object.freeze({
+  [FOUNDATION_PLANET_PROVIDER_V1_0.version]: FOUNDATION_PLANET_PROVIDER_V1_0,
+  [FOUNDATION_PLANET_PROVIDER_V1_1.version]: FOUNDATION_PLANET_PROVIDER_V1_1
 });
 
 const BIOME_TO_RTS_SKIN = Object.freeze({
@@ -44,33 +75,68 @@ function finiteRange(value, min, max, label) {
   return value;
 }
 
+function providerForReceipt(receipt) {
+  const version = receipt?.capability?.version;
+  const provider = FOUNDATION_PLANET_SUPPORTED_PROVIDERS[version];
+  assert(provider, `unsupported Foundation Planet capability version: ${version || "<missing>"}`);
+  return provider;
+}
+
+function validateCanonicalCoordinate(coordinate, label) {
+  assert(isObject(coordinate), `${label} must be an object`);
+  const lat = coordinate.lat;
+  const lon = coordinate.lon;
+  assert(Number.isFinite(lat) && lat >= -90 && lat <= 90, `${label}.lat must be between -90 and 90`);
+  assert(Number.isFinite(lon) && lon >= -180 && lon < 180, `${label}.lon must use canonical range [-180, 180)`);
+  assert(!Object.is(lat, -0), `${label}.lat must use positive signed zero`);
+  assert(!Object.is(lon, -0), `${label}.lon must use positive signed zero`);
+  if (Math.abs(lat) === 90) {
+    assert(lon === 0, `${label}.lon must be 0 at either pole`);
+  }
+}
+
+function validateCanonicalCoordinateIdentity(receipt) {
+  for (let index = 0; index < receipt.request.coordinates.length; index += 1) {
+    const requested = receipt.request.coordinates[index];
+    const sampled = receipt.samples[index]?.coordinate;
+    validateCanonicalCoordinate(requested, `request.coordinates[${index}]`);
+    validateCanonicalCoordinate(sampled, `samples[${index}].coordinate`);
+    assert(sampled.lat === requested.lat && sampled.lon === requested.lon, `samples[${index}].coordinate must match the canonical request coordinate`);
+    if (requested.id != null || sampled.id != null) {
+      assert(sampled.id === requested.id, `samples[${index}].coordinate.id must match the request coordinate id`);
+    }
+  }
+}
+
 function validateReceipt(receipt) {
   assert(isObject(receipt), "Foundation Planet receipt must be an object");
-  assert(receipt.schema === FOUNDATION_PLANET_PROVIDER.receiptSchema, "unexpected Foundation Planet receipt schema");
   assert(receipt.capability?.id === FOUNDATION_PLANET_PROVIDER.capability, "unexpected Foundation Planet capability id");
-  assert(receipt.capability?.version === FOUNDATION_PLANET_PROVIDER.version, "unexpected Foundation Planet capability version");
-  assert(receipt.world?.id === FOUNDATION_PLANET_PROVIDER.worldId, "unexpected Foundation Planet world id");
-  assert(receipt.request?.schema === FOUNDATION_PLANET_PROVIDER.requestSchema, "unexpected Foundation Planet request schema");
+  const provider = providerForReceipt(receipt);
+  assert(receipt.schema === provider.receiptSchema, "unexpected Foundation Planet receipt schema");
+  assert(receipt.world?.id === provider.worldId, "unexpected Foundation Planet world id");
+  assert(receipt.request?.schema === provider.requestSchema, "unexpected Foundation Planet request schema");
   assert(typeof receipt.request?.profile === "string" && receipt.request.profile.length > 0, "Foundation Planet profile is required");
   assert(Array.isArray(receipt.request?.coordinates), "Foundation Planet request coordinates are required");
   assert(Array.isArray(receipt.samples), "Foundation Planet samples are required");
   assert(receipt.samples.length === receipt.request.coordinates.length, "sample count must equal coordinate count");
   assert(receipt.integrity?.algorithm === "sha256", "Foundation Planet receipt must use SHA-256 integrity");
   assert(/^[a-f0-9]{64}$/.test(receipt.integrity?.digest || ""), "Foundation Planet receipt digest must be lowercase SHA-256");
+  if (provider.coordinateIdentity) validateCanonicalCoordinateIdentity(receipt);
+  return provider;
 }
 
-function validateVerification(verification, receipt) {
+function validateVerification(verification, receipt, provider) {
   assert(isObject(verification), "Foundation Planet verifier must return an object");
-  assert(verification.schema === FOUNDATION_PLANET_PROVIDER.verificationSchema, "unexpected Foundation Planet verification schema");
+  assert(verification.schema === provider.verificationSchema, "unexpected Foundation Planet verification schema");
   assert(verification.valid === true, "Foundation Planet verifier did not validate the receipt");
   assert(verification.receiptDigest === receipt.integrity.digest, "verification digest does not match the receipt");
   assert(verification.sampleCount === receipt.samples.length, "verification sample count does not match the receipt");
-  assert(verification.worldId === FOUNDATION_PLANET_PROVIDER.worldId, "verification world does not match the pinned provider");
+  assert(verification.worldId === provider.worldId, "verification world does not match the pinned provider");
   assert(verification.appliedState === false, "provider verification unexpectedly reports applied state");
   assert(verification.canonical === false, "provider verification unexpectedly reports canonical authority");
 }
 
-function surfacePaintFromSample(entry, index, profile, receiptDigest, radius) {
+function surfacePaintFromSample(entry, index, profile, receiptDigest, radius, provider) {
   assert(isObject(entry), `samples[${index}] must be an object`);
   const coordinate = entry.coordinate;
   const sample = entry.sample;
@@ -103,10 +169,12 @@ function surfacePaintFromSample(entry, index, profile, receiptDigest, radius) {
     ],
     rules: [],
     sourceEvidence: {
-      providerCapability: FOUNDATION_PLANET_PROVIDER.capability,
+      providerCapability: provider.capability,
+      providerCapabilityVersion: provider.version,
       providerReceiptDigest: receiptDigest,
       sampleIndex: index,
       coordinateId,
+      coordinateIdentity: provider.coordinateIdentity ? clone(provider.coordinateIdentity) : null,
       biome,
       biomeLabel: typeof sample.biomeLabel === "string" ? sample.biomeLabel : null,
       elevationM: Number.isFinite(sample.elevationM) ? sample.elevationM : null,
@@ -116,27 +184,28 @@ function surfacePaintFromSample(entry, index, profile, receiptDigest, radius) {
 }
 
 export function createFoundationPlanetSurfaceProposal(receipt, verifySampleReceipt, options = {}) {
-  validateReceipt(receipt);
+  const provider = validateReceipt(receipt);
   assert(typeof verifySampleReceipt === "function", "a Foundation Planet receipt verifier is required");
   const radius = options.radius == null ? 7 : Number(options.radius);
   finiteRange(radius, 0.5, 30, "surface radius");
 
   const verification = verifySampleReceipt(clone(receipt));
-  validateVerification(verification, receipt);
+  validateVerification(verification, receipt, provider);
   const surfacePaint = receipt.samples.map((entry, index) =>
-    surfacePaintFromSample(entry, index, receipt.request.profile, receipt.integrity.digest, radius)
+    surfacePaintFromSample(entry, index, receipt.request.profile, receipt.integrity.digest, radius, provider)
   );
 
   return {
     schema: FOUNDATION_PLANET_SURFACE_BRIDGE_SCHEMA,
     status: "PROPOSAL_ONLY",
-    provider: clone(FOUNDATION_PLANET_PROVIDER),
+    provider: clone(provider),
     source: {
       receiptSchema: receipt.schema,
       receiptDigest: receipt.integrity.digest,
       worldId: receipt.world.id,
       profile: receipt.request.profile,
-      sampleCount: receipt.samples.length
+      sampleCount: receipt.samples.length,
+      coordinateIdentity: provider.coordinateIdentity ? clone(provider.coordinateIdentity) : null
     },
     target: {
       mapSchemaVersion: 2,
