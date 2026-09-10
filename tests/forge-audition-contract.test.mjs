@@ -32,6 +32,9 @@ test("tactical readability is measured at bounded RTS views without inventing a 
 
 test("phone and accessibility realization keep explicit interaction affordances", () => {
   assert.match(css, /min-height: 44px/);
+  assert.match(css, /\.stage-empty\[hidden\]\s*\{\s*display:\s*none/);
+  assert.match(css, /\.skip-link\s*\{[^}]*opacity:\s*0[^}]*pointer-events:\s*none/s);
+  assert.match(css, /\.skip-link:focus\s*\{[^}]*opacity:\s*1[^}]*pointer-events:\s*auto/s);
   assert.match(css, /prefers-reduced-motion/);
   assert.match(css, /prefers-contrast: more/);
   assert.match(css, /forced-colors: active/);
