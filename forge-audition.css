@@ -22,8 +22,8 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 button:disabled { opacity: .45; cursor: not-allowed; }
 button[aria-pressed="true"] { background: #1e5161; border-color: #93e6ff; }
 button.primary { width: 100%; margin-top: 12px; background: linear-gradient(135deg, #1a5c70, #244d67); border-color: rgba(147,230,255,.7); font-weight: 800; letter-spacing: .03em; }
-.skip-link { position: fixed; top: 8px; left: 8px; z-index: 20; transform: translateY(-160%); background: #fff; color: #071018; padding: 10px 14px; border-radius: 8px; }
-.skip-link:focus { transform: none; }
+.skip-link { position: fixed; top: 8px; left: 8px; z-index: 20; opacity: 0; pointer-events: none; transform: translateY(-160%); background: #fff; color: #071018; padding: 10px 14px; border-radius: 8px; }
+.skip-link:focus { opacity: 1; pointer-events: auto; transform: none; }
 .shell { width: min(1500px, calc(100% - 28px)); margin: 0 auto; padding: 18px 0 28px; }
 .topbar { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; padding: 14px 16px; border: 1px solid var(--line); background: rgba(8,20,29,.78); backdrop-filter: blur(18px); border-radius: 16px; }
 .brand-mark { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; text-decoration: none; font-weight: 900; letter-spacing: .08em; background: linear-gradient(145deg, #edf8ff, #7cc8e6); color: #08131c; }
