@@ -29,8 +29,8 @@ The integration is pinned to:
 - repository: `mike-axiom-mir/foundation-planet-experiments`;
 - PR: #9;
 - provider head: `8f4e543669141acf93c61d44cf3827b1240e76f0`;
-- package: `axm-foundation-planet-sampler@1.0.0`;
-- capability: `axm.foundation-planet.coordinate-sampler`;
+- package: `axm-foundation-planet-sampler@0.1.0`;
+- capability: `axm.foundation-planet.coordinate-sampler@1.0.0`;
 - underlying Planet model revision declared by the package: `b838933c0cf13b03add15bad9757a75a380d2173`.
 
 `integrations/foundation-planet-surface.json` records the same provider/consumer boundary in machine-readable form. The hosted interoperability job checks out that exact provider head, runs its own package test, packs it, installs the tarball locally with npm offline mode, generates a genuine sample receipt, verifies it with the installed provider, maps it, explicitly applies it to a real blank RTS globe map, and requires the current `validateMapDefinition(...)` consumer seam to admit the result.

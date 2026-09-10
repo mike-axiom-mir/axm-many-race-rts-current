@@ -61,7 +61,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/provider-dist"
           npm pack ./_provider/foundation-planet/packages/foundation-planet-sampler --pack-destination "$RUNNER_TEMP/provider-dist"
           printf '{"private":true,"type":"module"}\n' > package.json
-          npm install --offline --ignore-scripts --no-audit --no-fund "$RUNNER_TEMP/provider-dist/axm-foundation-planet-sampler-1.0.0.tgz"
+          npm install --offline --ignore-scripts --no-audit --no-fund "$RUNNER_TEMP/provider-dist/axm-foundation-planet-sampler-0.1.0.tgz"
       - name: Provide an offline Three.js contract stub for Node schema validation
         run: |
           mkdir -p node_modules/three
