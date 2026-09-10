@@ -46,6 +46,7 @@ async function renderJourney(page) {
   await setFiles(page);
   await page.locator("#verifyButton").click();
   await page.locator('#renderState[data-state="rendered"]').waitFor({ timeout: 15000 });
+  if (!(await page.locator("#stageEmpty").isHidden())) throw new Error("pre-render guidance remained visible over verified asset");
   const commandHeight = Number.parseInt(await page.locator("#screenMetric").textContent(), 10);
   await page.locator('[data-view="distant"]').click();
   await page.waitForTimeout(120);
@@ -127,6 +128,7 @@ try {
   await mobile.locator("#receiptFile").setInputFiles(receiptPath);
   await mobile.locator("#verifyButton").click();
   await mobile.locator('#renderState[data-state="rendered"]').waitFor({ timeout: 15000 });
+  if (!(await mobile.locator("#stageEmpty").isHidden())) throw new Error("mobile pre-render guidance remained visible after recovery");
   evidence.mobileHeldRecovered = true;
   evidence.mobileScrollWidth = await mobile.evaluate(() => document.documentElement.scrollWidth);
   evidence.mobileViewportWidth = await mobile.evaluate(() => window.innerWidth);
