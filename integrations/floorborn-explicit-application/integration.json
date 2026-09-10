@@ -1,0 +1,55 @@
+{
+  "schema": "axm.integration-binding/v0.1",
+  "id": "axm-many-race-rts:floorborn-explicit-application",
+  "status": "EXPERIMENTAL",
+  "consumer": {
+    "repository": "mike-axiom-mir/axm-many-race-rts-current",
+    "capability": "axm.rts.floorborn-explicit-application",
+    "stackedOn": {
+      "pullRequest": 49,
+      "head": "15579a0b426829312bb7062146d7e2e341a9ee53",
+      "capability": "axm.rts.floorborn-bound-exchange"
+    }
+  },
+  "provider": {
+    "repository": "mike-axiom-mir/axm-floor-born",
+    "pullRequest": 10,
+    "head": "9183acabfd9fab1f2913527871e651300a160e62",
+    "package": "axm-floor-born",
+    "packageVersion": "0.15.1",
+    "capability": "axm.floorborn.bounded-player-process",
+    "processResponseSchema": "axm.floorborn.process-response/v0.2",
+    "processReceiptSchema": "axm.floorborn.process-receipt/v0.2"
+  },
+  "application": {
+    "approvalSchema": "axm.rts.floorborn-seat-approval/v0.1",
+    "approvalDecision": "APPROVE_THIS_DISPATCH",
+    "admissionIdentity": "SHA-256 of the complete validated bound-exchange admission",
+    "playerDoor": "src/multiSeatPatch.js::connectedAiCommand",
+    "event": "axm-seat-command",
+    "supportedCommand": "move"
+  },
+  "runtime": {
+    "providerRequiredByDefault": false,
+    "providerDiscovery": false,
+    "providerAutoInstall": false,
+    "providerAutoExecution": false,
+    "networkAdded": false,
+    "accountAdded": false,
+    "aiModelAdded": false
+  },
+  "authority": {
+    "automaticApproval": false,
+    "commandDispatch": "EXPLICIT_CALLER_APPROVAL_ONLY",
+    "downstreamGameMutation": "EXISTING_CONNECTED_AI_PLAYER_DOOR_ONLY",
+    "merge": false,
+    "publication": false,
+    "canon": false
+  },
+  "truth": {
+    "providerAuthorshipAuthenticated": false,
+    "sha256Means": "content identity/integrity only",
+    "applicationReceiptProvesDownstreamState": false,
+    "approvalReplayProtection": false
+  }
+}
