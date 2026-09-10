@@ -133,7 +133,7 @@ try {
   if (result.parseCalls !== 1) throw new Error(`expected one explicit GLTFLoader parse, got ${result.parseCalls}`);
   if (result.assetId !== "rts-northpole-guard") throw new Error(`unexpected asset ${result.assetId}`);
   if (result.meshCount < 1 || result.renderCalls < 1 || result.triangles < 1) throw new Error("renderer evidence is incomplete");
-  if (result.consumerAuthority.renderGraphMutation !== false || result.consumerAuthority.canonicalGameStateMutation === true) throw new Error("consumer authority widened");
+  if (result.consumerAuthority.render_graph_mutation !== false || result.consumerAuthority.canonical_game_state_mutation !== false) throw new Error("consumer authority widened");
   if (result.realizationAuthority.render_graph_mutation !== false || result.realizationAuthority.canonical_game_state_mutation !== false) throw new Error("realization authority widened");
   if (pageErrors.length || consoleErrors.length) throw new Error(`browser errors: ${JSON.stringify({ pageErrors, consoleErrors })}`);
   console.log(JSON.stringify({ ...result, pageErrors, consoleErrors }, null, 2));
