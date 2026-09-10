@@ -11,19 +11,40 @@
   },
   "provider": {
     "repository": "mike-axiom-mir/foundation-planet-experiments",
-    "pullRequest": 9,
-    "head": "8f4e543669141acf93c61d44cf3827b1240e76f0",
+    "pullRequest": 11,
+    "head": "d04a47289cdf6ed9f38b65fa989965504eee7e3e",
     "package": "axm-foundation-planet-sampler",
-    "packageVersion": "0.1.0",
+    "packageVersion": "0.2.0",
     "capability": "axm.foundation-planet.coordinate-sampler",
-    "capabilityVersion": "1.0.0",
-    "underlyingModelRevision": "b838933c0cf13b03add15bad9757a75a380d2173"
+    "capabilityVersion": "1.1.0",
+    "underlyingModelRevision": "b838933c0cf13b03add15bad9757a75a380d2173",
+    "coordinateIdentity": {
+      "angularUnit": "decimal-degrees",
+      "latitudeRange": "[-90, 90]",
+      "longitudeRange": "[-180, 180)",
+      "antimeridianLongitude": -180,
+      "poleLongitude": 0,
+      "signedZero": "positive"
+    }
+  },
+  "compatibility": {
+    "acceptedCapabilityVersions": ["1.0.0", "1.1.0"],
+    "legacyReceiptVersion": {
+      "pullRequest": 9,
+      "head": "8f4e543669141acf93c61d44cf3827b1240e76f0",
+      "packageVersion": "0.1.0",
+      "capabilityVersion": "1.0.0",
+      "coordinateIdentity": null,
+      "rule": "accepted as legacy evidence without retroactive coordinate canonicalization"
+    },
+    "unknownVersions": "REJECT"
   },
   "bridge": {
     "input": "axm.foundation-planet.sample-receipt/v1",
     "output": "axm.rts.foundation-planet-surface-proposal/v1",
     "requiresProviderReplayVerification": true,
     "preservesCoordinates": true,
+    "preservesCanonicalCoordinateIdentityWhenDeclared": true,
     "projectsBiomeToExistingRtsSurfaceSkin": true,
     "appliesAutomatically": false
   },
