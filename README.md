@@ -221,6 +221,10 @@ Then open:
 
 Three.js is currently pinned through jsDelivr. A later local-intake pass can vendor it for fully offline use.
 
+### Optional local Floorborn player
+
+The Phase 34 public-state and command contracts can be passed to Floorborn's bounded local player process through a strict, dependency-free connected-seat adapter. It returns an integrity-checked ordinary-seat move candidate but never applies it automatically. See [`docs/FLOORBORN_CONNECTED_SEAT.md`](docs/FLOORBORN_CONNECTED_SEAT.md) for the executable offline example and explicit authority boundary.
+
 ## Architecture
 
 ### Core flat runtime
