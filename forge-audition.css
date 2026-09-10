@@ -39,6 +39,7 @@ button.primary { width: 100%; margin-top: 12px; background: linear-gradient(135d
 .stage { position: relative; min-height: 560px; background: linear-gradient(#132837, #0d1b25 58%, #0a171d); overflow: hidden; }
 .stage canvas { width: 100%; height: 100%; display: block; }
 .stage-empty { position: absolute; inset: 0; display: grid; place-content: center; gap: 8px; padding: 28px; text-align: center; color: var(--muted); z-index: 2; pointer-events: none; }
+.stage-empty[hidden] { display: none; }
 .stage-empty strong { color: #e9f6ff; font-size: 1.15rem; }
 .stage-overlay { position: absolute; inset: 12px 12px auto; display: flex; gap: 8px; justify-content: space-between; flex-wrap: wrap; pointer-events: none; }
 .stage-overlay span { padding: 7px 9px; border: 1px solid rgba(255,255,255,.12); border-radius: 999px; background: rgba(4,12,18,.74); font-size: .72rem; font-weight: 800; letter-spacing: .06em; }
