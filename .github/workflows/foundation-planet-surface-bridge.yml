@@ -35,10 +35,10 @@ jobs:
         run: node --experimental-default-type=module --test tests/foundation-planet-surface-bridge.test.mjs
 
   real-provider-roundtrip:
-    name: Installed provider → current RTS map schema
+    name: Canonical provider identity → current RTS map schema
     runs-on: ubuntu-latest
     env:
-      PROVIDER_REF: 8f4e543669141acf93c61d44cf3827b1240e76f0
+      PROVIDER_REF: d04a47289cdf6ed9f38b65fa989965504eee7e3e
     steps:
       - name: Check out RTS consumer
         uses: actions/checkout@v4
@@ -61,7 +61,23 @@ jobs:
           mkdir -p "$RUNNER_TEMP/provider-dist"
           npm pack ./_provider/foundation-planet/packages/foundation-planet-sampler --pack-destination "$RUNNER_TEMP/provider-dist"
           printf '{"private":true,"type":"module"}\n' > package.json
-          npm install --offline --ignore-scripts --no-audit --no-fund "$RUNNER_TEMP/provider-dist/axm-foundation-planet-sampler-0.1.0.tgz"
+          npm install --offline --ignore-scripts --no-audit --no-fund "$RUNNER_TEMP/provider-dist/axm-foundation-planet-sampler-0.2.0.tgz"
+      - name: Verify installed descriptor carries reviewed coordinate identity
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import { describeCapability } from 'axm-foundation-planet-sampler';
+          const descriptor = describeCapability();
+          assert.equal(descriptor.version, '1.1.0');
+          assert.deepEqual(descriptor.model.coordinateIdentity, {
+            angularUnit: 'decimal-degrees',
+            latitudeRange: '[-90, 90]',
+            longitudeRange: '[-180, 180)',
+            antimeridianLongitude: -180,
+            poleLongitude: 0,
+            signedZero: 'positive'
+          });
+          NODE
       - name: Provide an offline Three.js contract stub for Node schema validation
         run: |
           mkdir -p node_modules/three
@@ -78,5 +94,5 @@ jobs:
             length() { return Math.hypot(this.x, this.y, this.z); }
           }
           JS
-      - name: Prove installed-provider receipt → proposal → real map admission
+      - name: Prove canonical provider receipt → proposal → real map admission
         run: node --test tests/foundation-planet-surface-real-provider.test.mjs
