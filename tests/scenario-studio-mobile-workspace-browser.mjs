@@ -30,6 +30,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   const pageErrors = [];
   const consoleErrors = [];
+  const paneButton = name => page.locator(`#mobileWorkspace [data-mobile-pane="${name}"]`);
   page.on("pageerror", error => pageErrors.push(String(error)));
   page.on("console", message => { if (message.type() === "error") consoleErrors.push(message.text()); });
 
@@ -37,17 +38,17 @@ try {
   await page.locator("#mobileWorkspace").waitFor({ state: "visible" });
   await page.locator("#authorPanel").waitFor({ state: "visible" });
   assert.equal(await page.locator("#contentPanel").isVisible(), false);
-  assert.equal(await page.locator('[data-mobile-pane="author"]').getAttribute("aria-pressed"), "true");
+  assert.equal(await paneButton("author").getAttribute("aria-pressed"), "true");
 
   const targetHeights = await page.locator("#mobileWorkspace button").evaluateAll(buttons =>
     buttons.map(button => button.getBoundingClientRect().height)
   );
   assert.ok(targetHeights.every(height => height >= 44), `phone workspace target below 44px: ${targetHeights.join(", ")}`);
 
-  await page.locator('[data-mobile-pane="content"]').click();
+  await paneButton("content").click();
   await page.locator("#contentPanel").waitFor({ state: "visible" });
   assert.equal(await page.locator("#authorPanel").isVisible(), false);
-  assert.equal(await page.locator('[data-mobile-pane="content"]').getAttribute("aria-pressed"), "true");
+  assert.equal(await paneButton("content").getAttribute("aria-pressed"), "true");
 
   const contentBox = await page.locator("#contentPanel").boundingBox();
   const dockBox = await page.locator("#mobileWorkspace").boundingBox();
@@ -85,17 +86,17 @@ try {
   const download = await downloadPromise;
   assert.match(download.suggestedFilename(), /\.axm-map\.json$/);
 
-  const contentButton = page.locator('[data-mobile-pane="content"]');
+  const contentButton = paneButton("content");
   await contentButton.focus();
   await contentButton.press("Home");
-  assert.equal(await page.locator('[data-mobile-pane="world"]').getAttribute("aria-pressed"), "true");
+  assert.equal(await paneButton("world").getAttribute("aria-pressed"), "true");
   assert.equal(await page.locator("#authorPanel").isVisible(), false);
   assert.equal(await page.locator("#contentPanel").isVisible(), false);
   assert.equal(await page.locator("#viewport canvas").isVisible(), true);
   await page.screenshot({ path: `${output}/scenario-mobile-world.png`, fullPage: true });
 
-  await page.locator('[data-mobile-pane="world"]').press("ArrowRight");
-  assert.equal(await page.locator('[data-mobile-pane="author"]').getAttribute("aria-pressed"), "true");
+  await paneButton("world").press("ArrowRight");
+  assert.equal(await paneButton("author").getAttribute("aria-pressed"), "true");
   await page.locator("#authorPanel").waitFor({ state: "visible" });
   assert.equal(await page.locator("#contentPanel").isVisible(), false);
 
