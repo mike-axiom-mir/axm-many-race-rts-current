@@ -12,10 +12,10 @@ function injectStyle() {
     .axm-seat-hud{position:absolute;z-index:6;top:84px;left:50%;transform:translateX(-50%);display:flex;gap:5px;flex-wrap:wrap;justify-content:center;pointer-events:none;max-width:64vw}
     .axm-seat-chip{display:flex;gap:5px;align-items:center;flex-wrap:wrap;padding:5px 7px;border-radius:999px;background:rgba(7,14,21,.80);border:1px solid rgba(160,194,216,.22);font:700 8px/1 system-ui,sans-serif;color:#c7d8e4;backdrop-filter:blur(8px)}
     .axm-seat-dot{width:7px;height:7px;border-radius:50%}.axm-seat-chip.dead{opacity:.38;text-decoration:line-through}
-    .axm-seat-result{flex-basis:100%;padding-left:12px;font-size:7px;line-height:1.2;letter-spacing:.055em;color:#8ee7b7;white-space:normal}
+    .axm-seat-result{flex-basis:100%;padding-left:12px;font-size:9px;line-height:1.25;letter-spacing:.045em;color:#8ee7b7;white-space:normal}
     .axm-seat-result.held{color:#ffd27d}
     .axm-seat-announcer{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
-    @media(max-width:900px){.axm-seat-hud{top:66px;max-width:96vw}.axm-seat-chip{font-size:7px;padding:4px 6px}.axm-seat-result{font-size:6.5px}}
+    @media(max-width:900px){.axm-seat-hud{top:66px;max-width:96vw}.axm-seat-chip{font-size:7px;padding:4px 6px}.axm-seat-result{font-size:8.5px}}
   `;
   document.head.appendChild(style);
 }
