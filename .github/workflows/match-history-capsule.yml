@@ -1,0 +1,38 @@
+name: Match history capsule
+
+on:
+  pull_request:
+    paths:
+      - "src/matchStatsCapsule.js"
+      - "tests/match-stats-capsule.test.mjs"
+      - ".github/workflows/match-history-capsule.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/matchStatsCapsule.js"
+      - "tests/match-stats-capsule.test.mjs"
+      - ".github/workflows/match-history-capsule.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capsule-contract:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Syntax check
+        run: |
+          node --check src/matchStatsCapsule.js
+          node --check tests/match-stats-capsule.test.mjs
+      - name: Inherited persistent history contract
+        run: node --test tests/match-stats-history-contract.test.mjs
+      - name: Portable capsule contract
+        run: node --test tests/match-stats-capsule.test.mjs

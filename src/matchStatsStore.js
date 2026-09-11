@@ -92,19 +92,75 @@ function storageAvailable() {
   }
 }
 
-function loadRaw() {
-  if (!storageAvailable()) return emptyLedger();
+function publicStorageReceipt(load) {
+  return {
+    status: load.status,
+    reason: load.reason,
+    schemaVersion: load.schemaVersion ?? null,
+    rawBytes: load.raw == null ? 0 : new TextEncoder().encode(load.raw).byteLength,
+    matchCount: load.ledger.matches.length
+  };
+}
+
+function loadStoredLedger() {
+  if (!storageAvailable()) {
+    return { status: "UNAVAILABLE", reason: "storage-unavailable", schemaVersion: null, raw: null, ledger: emptyLedger() };
+  }
+
+  const raw = globalThis.localStorage.getItem(MATCH_STATS_STORAGE_KEY);
+  if (raw === null) {
+    return { status: "ABSENT", reason: "no-history", schemaVersion: null, raw: null, ledger: emptyLedger() };
+  }
+
+  let parsed;
   try {
-    const parsed = JSON.parse(globalThis.localStorage.getItem(MATCH_STATS_STORAGE_KEY) || "null");
-    if (!parsed || !Array.isArray(parsed.matches)) return emptyLedger();
+    parsed = JSON.parse(raw);
+  } catch {
+    return { status: "HELD", reason: "malformed-json", schemaVersion: null, raw, ledger: emptyLedger() };
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || !Array.isArray(parsed.matches)) {
+    return { status: "HELD", reason: "invalid-ledger-shape", schemaVersion: parsed?.schemaVersion ?? null, raw, ledger: emptyLedger() };
+  }
+
+  if (!Number.isInteger(parsed.schemaVersion) || parsed.schemaVersion !== MATCH_STATS_SCHEMA_VERSION) {
     return {
+      status: "HELD",
+      reason: parsed.schemaVersion > MATCH_STATS_SCHEMA_VERSION ? "future-schema-version" : "unsupported-schema-version",
+      schemaVersion: parsed.schemaVersion ?? null,
+      raw,
+      ledger: emptyLedger()
+    };
+  }
+
+  const matches = parsed.matches.map(normalizeMatch);
+  if (matches.some(match => !match.id)) {
+    return { status: "HELD", reason: "match-missing-id", schemaVersion: parsed.schemaVersion, raw, ledger: emptyLedger() };
+  }
+
+  const ids = new Set();
+  for (const match of matches) {
+    if (ids.has(match.id)) {
+      return { status: "HELD", reason: "duplicate-match-id", schemaVersion: parsed.schemaVersion, raw, ledger: emptyLedger() };
+    }
+    ids.add(match.id);
+  }
+
+  return {
+    status: "VALID",
+    reason: "verified-history",
+    schemaVersion: parsed.schemaVersion,
+    raw,
+    ledger: {
       schemaVersion: MATCH_STATS_SCHEMA_VERSION,
       updatedAt: parsed.updatedAt || null,
-      matches: parsed.matches.map(normalizeMatch).filter(match => match.id)
-    };
-  } catch {
-    return emptyLedger();
-  }
+      matches
+    }
+  };
+}
+
+function loadReadableLedger() {
+  return loadStoredLedger().ledger;
 }
 
 function saveRaw(ledger) {
@@ -141,14 +197,27 @@ export function makeMatchId(parts = []) {
   return `match-${hash.toString(16).padStart(8, "0")}`;
 }
 
+export function inspectMatchStatsStorage() {
+  return clone(publicStorageReceipt(loadStoredLedger()));
+}
+
 export function readMatchStats() {
-  return clone(loadRaw());
+  return clone(loadReadableLedger());
 }
 
 export function recordMatchStats(matchInput) {
   const match = normalizeMatch(matchInput);
   if (!match.id || !match.participants.length) return { stored: false, reason: "invalid-match", match: null };
-  const ledger = loadRaw();
+
+  const loaded = loadStoredLedger();
+  if (loaded.status === "HELD") {
+    return { stored: false, reason: "history-held", match: clone(match), storage: publicStorageReceipt(loaded) };
+  }
+  if (loaded.status === "UNAVAILABLE") {
+    return { stored: false, reason: "storage-unavailable", match: clone(match), storage: publicStorageReceipt(loaded) };
+  }
+
+  const ledger = loaded.ledger;
   if (ledger.matches.some(existing => existing.id === match.id)) return { stored: false, reason: "duplicate", match: clone(match) };
   ledger.matches.push(match);
   if (ledger.matches.length > MATCH_STATS_MAX_MATCHES) ledger.matches.splice(0, ledger.matches.length - MATCH_STATS_MAX_MATCHES);
@@ -158,7 +227,7 @@ export function recordMatchStats(matchInput) {
 }
 
 export function factionStats(options = {}) {
-  const ledger = loadRaw();
+  const ledger = loadReadableLedger();
   const modeFilter = options.mode ? String(options.mode) : null;
   const output = new Map();
 
@@ -217,7 +286,7 @@ export function factionStats(options = {}) {
 }
 
 export function statsOverview(options = {}) {
-  const ledger = loadRaw();
+  const ledger = loadReadableLedger();
   const modeFilter = options.mode ? String(options.mode) : null;
   const matches = ledger.matches.filter(match => {
     if (modeFilter && match.mode !== modeFilter) return false;
@@ -234,10 +303,13 @@ export function statsOverview(options = {}) {
 }
 
 export function exportMatchStatsSnapshot() {
+  const loaded = loadStoredLedger();
   return {
     exportedAt: new Date().toISOString(),
     storageKey: MATCH_STATS_STORAGE_KEY,
-    ledger: readMatchStats(),
+    storage: publicStorageReceipt(loaded),
+    rejectedRaw: loaded.status === "HELD" ? loaded.raw : null,
+    ledger: clone(loaded.ledger),
     overview: statsOverview({ controller: "human" })
   };
 }
@@ -250,6 +322,7 @@ export const MatchStatsStore = {
   record: recordMatchStats,
   factions: factionStats,
   overview: statsOverview,
+  inspectStorage: inspectMatchStatsStorage,
   exportSnapshot: exportMatchStatsSnapshot,
   storageAvailable
 };
