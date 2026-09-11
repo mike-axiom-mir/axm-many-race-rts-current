@@ -1,0 +1,109 @@
+name: City browser-direct RTS remote seat
+
+on:
+  pull_request:
+    paths:
+      - "src/cityBrowserDirectSeat.js"
+      - "src/seatCommandAuthorityPatch.js"
+      - "src/seatControllers.js"
+      - "src/world.js"
+      - "tests/city-browser-direct-seat-*"
+      - "integrations/city-browser-direct-rts-seat.json"
+      - "docs/CITY_BROWSER_DIRECT_RTS_SEAT.md"
+      - ".github/workflows/city-browser-direct-rts-seat.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  consumer-contract:
+    name: consumer contract · Node ${{ matrix.node }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    steps:
+      - name: Checkout exact consumer head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Assert exact consumer head
+        if: github.event_name == 'pull_request'
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+      - name: Syntax
+        run: |
+          node --experimental-default-type=module --check src/cityBrowserDirectSeat.js
+          node --check tests/city-browser-direct-seat-contract.test.mjs
+          node --check tests/city-browser-direct-seat-browser.mjs
+      - name: Fail-closed bridge contract
+        run: node --experimental-default-type=module --test tests/city-browser-direct-seat-contract.test.mjs
+      - name: Exact-base whitespace
+        if: github.event_name == 'pull_request'
+        run: git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
+
+  exact-provider-browser:
+    name: exact City provider -> RTS seat gate in Chromium
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout exact consumer head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Checkout exact City browser-direct provider
+        uses: actions/checkout@v4
+        with:
+          repository: mike-axiom-mir/axm-city-multiplayer
+          ref: 256f670d832633159a3d91b9e4f522a438e966b4
+          path: _provider
+          fetch-depth: 1
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Assert exact Git identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          fi
+          test "$(git -C _provider rev-parse HEAD)" = "256f670d832633159a3d91b9e4f522a438e966b4"
+      - name: Run provider-owned transport and package contracts
+        run: |
+          node --test _provider/browser/tests/manual_webrtc.test.mjs
+          node --test _provider/browser/tests/browser_direct_package.test.mjs
+      - name: Pack exact provider and install proof-only browser dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          PACK_DIR="$RUNNER_TEMP/axm-city-pack"
+          CONSUMER_DIR="$RUNNER_TEMP/axm-rts-bridge-proof"
+          mkdir -p "$PACK_DIR" "$CONSUMER_DIR"
+          npm pack ./_provider/packages/browser-direct --pack-destination "$PACK_DIR" --json > "$RUNNER_TEMP/axm-city-pack.json"
+          TGZ="$PACK_DIR/$(node -e 'const f=require(process.argv[1]); process.stdout.write(f[0].filename)' "$RUNNER_TEMP/axm-city-pack.json")"
+          printf '%s\n' '{"name":"axm-rts-city-bridge-proof","private":true,"type":"module"}' > "$CONSUMER_DIR/package.json"
+          npm install --prefix "$CONSUMER_DIR" --ignore-scripts --no-audit --no-fund "$TGZ" three@0.180.0 playwright@1.55.0
+          cmp _provider/browser/manual_webrtc.mjs "$CONSUMER_DIR/node_modules/axm-city-browser-direct/manual_webrtc.mjs"
+          echo "AXM_BRIDGE_NODE_MODULES=$CONSUMER_DIR/node_modules" >> "$GITHUB_ENV"
+          "$CONSUMER_DIR/node_modules/.bin/playwright" install chromium
+      - name: Real installed-provider DataChannel to existing RTS seat command
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          node tests/city-browser-direct-seat-browser.mjs | tee evidence/city-browser-direct-rts-seat.json
+      - name: Retain bridge evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: city-browser-direct-rts-seat-${{ github.event.pull_request.head.sha || github.sha }}
+          path: evidence/city-browser-direct-rts-seat.json
+          if-no-files-found: error
+          retention-days: 14

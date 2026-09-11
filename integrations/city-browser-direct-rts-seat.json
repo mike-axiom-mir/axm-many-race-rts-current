@@ -1,0 +1,57 @@
+{
+  "schema": "axm.rts.integration/v0.1",
+  "id": "axm.rts.city-browser-direct-seat/v0.1",
+  "consumer": {
+    "repository": "mike-axiom-mir/axm-many-race-rts-current",
+    "baseCommit": "790e8969549321afcd7c2fe76bddc31ab3d8c995",
+    "existingDoor": "axm-seat-command",
+    "currentSeatLimit": 4
+  },
+  "provider": {
+    "repository": "mike-axiom-mir/axm-city-multiplayer",
+    "pullRequest": 18,
+    "commit": "256f670d832633159a3d91b9e4f522a438e966b4",
+    "package": "axm-city-browser-direct@0.1.0",
+    "capability": "axm.browser-direct/v1",
+    "license": "Apache-2.0"
+  },
+  "patternProvenance": {
+    "repository": "mike-axiom-mir/axm-local-game-hub",
+    "pullRequest": 15,
+    "commit": "5c8e7887f50feb06cc7ee26c37df869030398d48",
+    "relationship": "conceptual adaptation of the proven provider-to-existing-player-door pattern",
+    "sourceCopied": false
+  },
+  "transportPolicy": {
+    "signaling": "manual-copy-paste",
+    "transport": "WebRTC-DataChannel",
+    "iceServers": [],
+    "relayFallback": false,
+    "accountRequired": false,
+    "messageBytes": 65536
+  },
+  "admission": {
+    "messageSchema": "axm.rts.remote-seat-command/v0.1",
+    "bindsGame": true,
+    "bindsBuild": true,
+    "bindsApplicationSession": true,
+    "bindsExactSeat": true,
+    "requiresContiguousSequence": true,
+    "supportedCommands": [
+      "move",
+      "attack-capital"
+    ]
+  },
+  "authority": {
+    "automaticProviderDiscovery": false,
+    "automaticProviderInstall": false,
+    "automaticConnection": false,
+    "automaticSeatSelection": false,
+    "seatCommandDispatchAfterAdmission": true,
+    "canonicalGameplayAuthority": false,
+    "humanIdentityAuthenticated": false,
+    "antiCheatProof": false,
+    "merge": false,
+    "canon": false
+  }
+}
