@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readMasterVolume, summarizeImpactAudio } from "../src/combatImpactAudioPatch.js";
+import { MAX_ACTIVE_AUDIO_VOICES, readMasterVolume, summarizeImpactAudio } from "../src/combatImpactAudioPatch.js";
 
 const authority = Object.freeze({ gameplayMutation: false, combatAttribution: false, canon: false });
 
@@ -21,7 +21,9 @@ test("impact audio accepts only the existing observation-only damage receipt", (
   assert.equal(summarizeImpactAudio(null), null);
   assert.equal(summarizeImpactAudio(event({ schema: "wrong" })), null);
   assert.equal(summarizeImpactAudio(event({ source: "guessed-hit" })), null);
-  assert.equal(summarizeImpactAudio(event({ authority: { gameplayMutation: true, canon: false } })), null);
+  assert.equal(summarizeImpactAudio(event({ authority: { gameplayMutation: true, combatAttribution: false, canon: false } })), null);
+  assert.equal(summarizeImpactAudio(event({ authority: { gameplayMutation: false, combatAttribution: true, canon: false } })), null);
+  assert.equal(summarizeImpactAudio(event({ authority: { gameplayMutation: false, combatAttribution: false, canon: true } })), null);
   assert.ok(summarizeImpactAudio(event()));
 });
 
@@ -46,6 +48,7 @@ test("stronger and lethal observed damage only enrich the replaceable sound real
   assert.equal(lethal.voiceCount, 2);
   assert.ok(lethal.duration > strong.duration);
   assert.ok(lethal.frequency < strong.frequency);
+  assert.equal(MAX_ACTIVE_AUDIO_VOICES, 8);
 });
 
 test("saved master volume defaults safely and clamps malformed local preference", () => {
