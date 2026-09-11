@@ -58,6 +58,7 @@ test("real observed Skirmish damage schedules local WebAudio after human activat
   const observed = await page.evaluate(() => ({
     receipt: window.__axmImpactAudioEvents.find(event => event.played === true),
     scheduledVoices: window.__axmCombatImpactAudioInstalled?.scheduled || 0,
+    activeVoices: window.__axmCombatImpactAudioInstalled?.activeVoices || 0,
     contextState: window.__axmCombatImpactAudioInstalled?.context?.state || null,
     enemyHp: Number(window.__AXM_RTS_WORLD__.entities.find(entity => entity?.parent && entity.userData?.owner === "enemy" && entity.userData?.type === "squad")?.userData?.hp),
     activeVisualEntries: window.__AXM_RTS_WORLD__?.__axmCombatDamageFeedbackFx?.entries?.length || 0,
@@ -74,9 +75,14 @@ test("real observed Skirmish damage schedules local WebAudio after human activat
   expect(observed.receipt.reason).toBe("observable-hit-scheduled");
   expect(observed.receipt.masterVolume).toBe(0.35);
   expect(observed.receipt.voiceCount).toBe(1);
+  expect(observed.receipt.activeVoices).toBeGreaterThanOrEqual(1);
+  expect(observed.receipt.activeVoices).toBeLessThanOrEqual(observed.receipt.maxActiveVoices);
+  expect(observed.receipt.maxActiveVoices).toBe(8);
+  expect(observed.contextState).toBe("running");
   expect(observed.receipt.contextState).toBe("running");
   expect(observed.receipt.authority).toEqual({ gameplayMutation: false, combatAttribution: false, canon: false });
   expect(observed.scheduledVoices).toBeGreaterThanOrEqual(1);
+  expect(observed.activeVoices).toBeLessThanOrEqual(8);
   expect(observed.activeVisualEntries).toBeGreaterThan(0);
   expect(observed.pageWidth).toBe(observed.viewportWidth);
 
