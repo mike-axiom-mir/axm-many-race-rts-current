@@ -105,9 +105,14 @@ test("real Skirmish HP loss answers with bounded visible damage feedback", async
       player.userData.target = null;
     }
   });
-  await page.waitForTimeout(900);
+  // Cleanup is driven by simulation dt, not wall-clock time. Under the repository-wide
+  // Chromium gate the game can advance more slowly than a focused run, so prove the
+  // bounded effect actually settles instead of assuming 900 ms of wall time is enough.
+  await expect.poll(
+    () => page.evaluate(() => window.__AXM_RTS_WORLD__?.__axmCombatDamageFeedbackFx?.entries?.length || 0),
+    { timeout: 3_000 }
+  ).toBe(0);
   const settled = await page.evaluate(() => window.__AXM_RTS_WORLD__?.__axmCombatDamageFeedbackFx?.entries?.length || 0);
-  expect(settled).toBe(0);
   expect(failures, failures.join("\n")).toEqual([]);
 
   const receipt = {
