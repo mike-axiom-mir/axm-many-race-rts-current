@@ -28,6 +28,7 @@ const sourcePaths = new Map([
 const proofHtml = `<!doctype html>
 <meta charset="utf-8">
 <title>AXM City browser-direct RTS seat proof</title>
+<script>window.__AXM_BROWSER_PROOF__ = { status: "BOOT" };</script>
 <script type="importmap">{"imports":{"three":"/vendor/three.mjs"}}</script>
 <script type="module">
 import { ManualBrowserPeer, describeBrowserDirectCapability } from "/vendor/provider.mjs";
@@ -193,7 +194,11 @@ page.on("requestfailed", (request) => failedRequests.push(`${request.method()} $
 
 try {
   await page.goto(baseUrl, { waitUntil: "load" });
-  await page.waitForFunction(() => globalThis.__AXM_BROWSER_PROOF__?.status !== "RUNNING", null, { timeout: 30000 });
+  try {
+    await page.waitForFunction(() => ["PASS", "FAIL"].includes(globalThis.__AXM_BROWSER_PROOF__?.status), null, { timeout: 30000 });
+  } catch (error) {
+    throw new Error(`browser proof did not settle: ${error?.message || String(error)}; pageErrors=${JSON.stringify(pageErrors)}; consoleErrors=${JSON.stringify(consoleErrors)}; failedRequests=${JSON.stringify(failedRequests)}`);
+  }
   const proof = await page.evaluate(() => globalThis.__AXM_BROWSER_PROOF__);
   if (proof?.status !== "PASS") throw new Error(`browser proof failed: ${JSON.stringify(proof)}`);
   if (pageErrors.length) throw new Error(`page errors: ${JSON.stringify(pageErrors)}`);
