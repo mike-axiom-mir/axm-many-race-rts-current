@@ -106,7 +106,7 @@ try {
   guest.send(firstMessage);
   const firstReceipt = await firstReceive;
   if (seatResults.length !== 1 || seatResults[0]?.status !== "APPLIED" || seatResults[0]?.commandType !== "move") {
-    throw new Error(`first command did not publish one APPLIED seat result: ${JSON.stringify(seatResults)}`);
+    throw new Error("first command did not publish one APPLIED seat result: " + JSON.stringify(seatResults));
   }
 
   const replayReceive = consumeBrowserDirectSeatMessage({ peer: host, bridge });
@@ -133,13 +133,13 @@ try {
   const hudResult = document.querySelector('[data-seat-command-result="seat-3"]');
   if (!hudResult) throw new Error("seat-3 acknowledgement was not rendered into the real multi-seat HUD");
   if (!hudResult.textContent.includes("APPLIED") || !hudResult.textContent.includes("MOVE")) {
-    throw new Error(`seat-3 HUD acknowledgement was not readable: ${hudResult.textContent}`);
+    throw new Error("seat-3 HUD acknowledgement was not readable: " + hudResult.textContent);
   }
   if (seatResults.length !== 2 || seatResults.some(result => result.authority !== "OBSERVATION_ONLY")) {
-    throw new Error(`seat result count/authority drifted: ${JSON.stringify(seatResults)}`);
+    throw new Error("seat result count/authority drifted: " + JSON.stringify(seatResults));
   }
   if (commands.length !== 2 || commands.some(command => command.owner !== "seat-3")) {
-    throw new Error(`ordinary world command witness drifted: ${JSON.stringify(commands)}`);
+    throw new Error("ordinary world command witness drifted: " + JSON.stringify(commands));
   }
 
   host.close();
