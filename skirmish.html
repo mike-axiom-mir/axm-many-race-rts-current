@@ -51,6 +51,12 @@
         <div class="section-title"><span>Strategic state</span></div><div id="strategyState" class="state-list"></div>
         <div class="section-title"><span>Controls</span></div><div class="controls"><span><kbd>WASD</kbd> / drag — camera</span><span><kbd>Wheel</kbd> — zoom</span><span>Build button → click terrain</span></div>
       </aside>
+      <nav id="mobileHudNav" class="mobile-hud-nav hidden" aria-label="Skirmish views">
+        <button type="button" data-mobile-view="field" aria-pressed="true">Field</button>
+        <button type="button" data-mobile-view="economy" aria-controls="leftHud" aria-pressed="false">Economy</button>
+        <button type="button" data-mobile-view="strategy" aria-controls="rightHud" aria-pressed="false">Strategy</button>
+      </nav>
+      <div id="mobileHudStatus" class="sr-only" aria-live="polite"></div>
       <div id="placementHint" class="placement-hint hidden">Choose a valid location</div><div id="toast" class="toast hidden"></div><button id="restartBtn" class="restart hidden">New world</button>
     </main>
   </div>
