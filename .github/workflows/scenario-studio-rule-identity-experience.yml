@@ -1,0 +1,50 @@
+name: Scenario Studio rule identity experience
+
+on:
+  pull_request:
+    paths:
+      - "src/scenarioRules.js"
+      - "src/scenarioStudio.js"
+      - "tests/scenario-studio-rule-identity-*.mjs"
+      - ".github/workflows/scenario-studio-rule-identity-experience.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Syntax
+        run: |
+          node --check src/scenarioRules.js
+          node --check src/scenarioStudio.js
+          node --check tests/scenario-studio-rule-identity-browser.mjs
+      - name: Rule identity contracts
+        run: node --test tests/scenario-rule-identity-contract.test.mjs tests/scenario-studio-rule-identity-experience.test.mjs
+
+  chromium:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install bounded browser verifier
+        run: |
+          npm install --no-save --package-lock=false playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Exercise the real Scenario Studio surface
+        run: node tests/scenario-studio-rule-identity-browser.mjs
+      - name: Upload visual evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenario-studio-rule-identity-evidence
+          path: test-results/*.png
+          if-no-files-found: warn
