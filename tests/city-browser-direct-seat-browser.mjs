@@ -11,7 +11,10 @@ if (!modulesRoot) throw new Error("AXM_BRIDGE_NODE_MODULES is required");
 
 const require = createRequire(import.meta.url);
 const playwrightEntry = require.resolve("playwright", { paths: [modulesRoot] });
-const { chromium } = await import(pathToFileURL(playwrightEntry).href);
+const playwrightModule = await import(pathToFileURL(playwrightEntry).href);
+const playwright = playwrightModule.default || playwrightModule;
+const { chromium } = playwright;
+if (!chromium) throw new Error("Playwright Chromium export is unavailable");
 
 const providerPath = join(modulesRoot, "axm-city-browser-direct", "manual_webrtc.mjs");
 const threePath = join(modulesRoot, "three", "build", "three.module.js");
