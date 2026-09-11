@@ -122,7 +122,7 @@ jobs:
       - name: Install exact CI-only renderer proof dependencies
         run: |
           npm install --no-save --ignore-scripts three@0.180.0 playwright@1.55.0
-          npx playwright install --with-deps chromium
+          node node_modules/playwright/cli.js install --with-deps chromium
       - name: Parse and render provider GLB in real Chromium Three.js
         env:
           AXM_FORGE_GLB_FIXTURE_DIR: ${{ runner.temp }}

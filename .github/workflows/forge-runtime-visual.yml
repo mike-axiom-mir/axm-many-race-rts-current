@@ -109,7 +109,7 @@ jobs:
       - name: Install exact CI-only browser dependencies
         run: |
           npm install --no-save --ignore-scripts three@0.180.0 playwright@1.55.0
-          npx playwright install --with-deps chromium
+          node node_modules/playwright/cli.js install --with-deps chromium
       - name: Serve exact RTS branch
         run: |
           python -m http.server 4173 --bind 127.0.0.1 >"$RUNNER_TEMP/forge-runtime-http.log" 2>&1 &

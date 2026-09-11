@@ -22,6 +22,7 @@ const threeCorePath = join(modulesRoot, "three", "build", "three.core.js");
 const sourcePaths = new Map([
   ["/src/cityBrowserDirectSeat.js", join(repoRoot, "src", "cityBrowserDirectSeat.js")],
   ["/src/world.js", join(repoRoot, "src", "world.js")],
+  ["/src/canvas2dRenderer.js", join(repoRoot, "src", "canvas2dRenderer.js")],
   ["/src/seatControllers.js", join(repoRoot, "src", "seatControllers.js")],
   ["/src/seatCommandAuthorityPatch.js", join(repoRoot, "src", "seatCommandAuthorityPatch.js")],
 ]);

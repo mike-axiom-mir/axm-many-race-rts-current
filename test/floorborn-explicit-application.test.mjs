@@ -21,10 +21,16 @@ import {
   fingerprintBoundFloorbornAdmission,
   FLOORBORN_SEAT_APPROVAL_SCHEMA
 } from "../src/floorbornExplicitApplication.js";
+import {
+  admissionFromBoundSeatResponse,
+  FLOORBORN_BOUND_SEAT_RESPONSE_SCHEMA,
+  FLOORBORN_BOUND_SEAT_RESPONSE_RECEIPT_SCHEMA
+} from "../src/floorbornBoundSeatResponse.js";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const BRIDGE = fileURLToPath(new URL("../tools/floorborn-bound-seat-bridge.mjs", import.meta.url));
 const PROVIDER = process.env.FLOORBORN_V02_PROVIDER || "";
+const BOUND_SEAT_RECEIPT_AUTHORITY = "CONTENT_INTEGRITY_ONLY_NO_COMMAND_EXECUTION_NO_GAME_MUTATION_NO_MERGE_NO_CANON";
 
 function providerAuthority() {
   return { automaticSelection: false, canon: false, execution: false, gameMutation: false, merge: false, publication: false };
@@ -88,6 +94,27 @@ function syntheticAdmission() {
   });
   const verification = verifyBoundFloorbornExchange({ request, response, replayedResponse: response });
   return admitBoundFloorbornDecision({ response, observation, verification });
+}
+
+function sealedBridgeResponse(admission) {
+  const body = stableClone({
+    schema: FLOORBORN_BOUND_SEAT_RESPONSE_SCHEMA,
+    ok: true,
+    status: admission.status,
+    candidate: admission.candidate,
+    playerSnapshot: admission.playerSnapshot,
+    providerReceipt: admission.providerReceipt,
+    exchangeVerification: admission.exchangeVerification,
+    authority: admission.authority
+  });
+  return stableClone({
+    ...body,
+    receipt: {
+      schema: FLOORBORN_BOUND_SEAT_RESPONSE_RECEIPT_SCHEMA,
+      sha256: sha256(body),
+      authority: BOUND_SEAT_RECEIPT_AUTHORITY
+    }
+  });
 }
 
 function approvalFor(admission, overrides = {}) {
@@ -189,10 +216,26 @@ test("dispatch failure cannot produce a false application receipt", () => {
   );
 });
 
+test("sealed bridge response is verified before its admission can be approved", () => {
+  const expected = syntheticAdmission();
+  const sealed = sealedBridgeResponse(expected);
+  const admission = admissionFromBoundSeatResponse(sealed);
+  assert.equal(fingerprintBoundFloorbornAdmission(admission), fingerprintBoundFloorbornAdmission(expected));
+
+  const tampered = stableClone(sealed);
+  tampered.candidate.point[0] = 13;
+  assert.throws(() => admissionFromBoundSeatResponse(tampered), /receipt does not match its content/);
+
+  const widened = stableClone(sealed);
+  widened.unexpected = true;
+  assert.throws(() => admissionFromBoundSeatResponse(widened), /fields are incompatible/);
+});
+
 test("exact installed Floorborn admission crosses the existing RTS connected-AI event door", { skip: !PROVIDER }, async () => {
   const run = runProviderBridge();
   assert.equal(run.status, 0, run.stderr);
-  const admission = JSON.parse(run.stdout);
+  const bridgeResponse = JSON.parse(run.stdout);
+  const admission = admissionFromBoundSeatResponse(bridgeResponse);
   const approval = approvalFor(admission);
 
   const priorWindow = globalThis.window;

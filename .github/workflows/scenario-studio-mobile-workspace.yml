@@ -42,7 +42,7 @@ jobs:
       - name: Install bounded browser verifier
         run: |
           npm install --no-save --package-lock=false playwright@1.55.0
-          npx playwright install --with-deps chromium
+          node node_modules/playwright/cli.js install --with-deps chromium
       - name: Exercise phone authoring, content, truth repair and world view
         run: node tests/scenario-studio-mobile-workspace-browser.mjs
       - name: Upload visual evidence
