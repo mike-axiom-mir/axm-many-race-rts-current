@@ -12,7 +12,7 @@
     <div id="viewport"></div>
     <header class="topbar glass">
       <div class="identity"><a href="./index.html" class="mark">AXM</a><div><div class="eyebrow">CO-OP SURVIVAL</div><h1>Defend the Workshop</h1><p>Shared objective • scarce supply • escalating waves</p></div></div>
-      <div class="links"><a href="./atlas.html">Atlas</a><a href="./index.html">Main menu</a></div>
+      <div class="links"><span id="controllerStatus" class="controller-status" role="status" aria-live="polite">INPUT · KEYBOARD / POINTER</span><a href="./atlas.html">Atlas</a><a href="./index.html">Main menu</a></div>
     </header>
 
     <section id="setup" class="setup glass">
@@ -24,7 +24,7 @@
       </div>
       <div id="setupValidation" class="validation"></div>
       <button id="startBtn" class="big primary">FORTIFY THE WORKSHOP</button>
-      <p class="truth">Shared-screen human seats use the active-seat selector for macro commands in this prototype. Connected-AI seats have a command event surface; independent controllers/network routing remain a later adapter.</p>
+      <p class="truth">Shared-screen human seats use one active-seat macro selector. A connected gamepad can now drive that same truthful command surface; independent simultaneous per-seat controllers and network routing remain later adapters.</p>
     </section>
 
     <aside id="leftHud" class="hud left glass hidden">
@@ -46,6 +46,19 @@
 
     <aside id="rightHud" class="hud right glass hidden">
       <div class="eyebrow">DEFENSE DOCTRINE</div>
+      <div class="controller-panel" aria-label="Keyboard and gamepad controls">
+        <div class="controller-panel-title">SOFA / KEYBOARD CONTROL</div>
+        <div id="controllerFeedback" class="controller-feedback" role="status" aria-live="polite" aria-atomic="true">Gamepad optional · A or Enter confirms · D-pad or WASD issues macro orders</div>
+        <div class="controller-grid" aria-hidden="true">
+          <span><b>A / Enter</b> confirm · intercept</span>
+          <span><b>D-pad / WASD</b> push direction</span>
+          <span><b>B / H</b> hold Workshop</span>
+          <span><b>X / T</b> build tower</span>
+          <span><b>Y / R</b> repair</span>
+          <span><b>LB/RB · Q/E</b> change seat</span>
+          <span><b>LT/RT · 1/2</b> recruit slots</span>
+        </div>
+      </div>
       <div class="stack commands">
         <button data-command="hold">Hold Workshop</button>
         <button data-command="intercept">Intercept nearest wave</button>
@@ -84,5 +97,6 @@
   </div>
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}</script>
   <script type="module" src="src/defendEntry.js"></script>
+  <script type="module" src="src/defendControllerExperience.js"></script>
 </body>
 </html>
