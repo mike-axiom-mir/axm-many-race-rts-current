@@ -1,0 +1,175 @@
+name: Forge tactical audition experience
+
+on:
+  pull_request:
+    paths:
+      - "forge-audition.html"
+      - "forge-audition.css"
+      - "src/forgeAudition.js"
+      - "src/verifiedForgeGlbConsumer.js"
+      - "tests/forge-audition-contract.test.mjs"
+      - "tests/forge-audition-browser-proof.mjs"
+      - ".github/workflows/forge-tactical-audition.yml"
+      - "index.html"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  experience-contract:
+    name: Node ${{ matrix.node }} audition contract
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["20", "22"]
+    steps:
+      - name: Check out exact audition head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Check JavaScript syntax
+        run: |
+          node --experimental-default-type=module --check src/forgeAudition.js
+          node --experimental-default-type=module --check tests/forge-audition-browser-proof.mjs
+      - name: Run audition and inherited consumer contracts
+        run: node --experimental-default-type=module --test tests/forge-audition-contract.test.mjs tests/verified-forge-glb-consumer.test.mjs
+      - name: Whitespace gate against exact stacked base
+        run: git diff --check "${{ github.event.pull_request.base.sha || github.event.before }}"..HEAD
+
+  exact-provider-browser-audition:
+    name: Exact Forge delivery through real RTS audition surface
+    runs-on: ubuntu-latest
+    env:
+      PROVIDER_REF: 666409d64c15d9b836b56d0603f1c869b84d2bb4
+      CONSUMER_REF: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out exact RTS audition head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Check out exact Game Asset Forge provider
+        uses: actions/checkout@v4
+        with:
+          repository: mike-axiom-mir/Axm-game-assets
+          ref: ${{ env.PROVIDER_REF }}
+          path: _provider/game-assets
+      - name: Verify exact dependency heads
+        run: |
+          test "$(git rev-parse HEAD)" = "$CONSUMER_REF"
+          test "$(git -C _provider/game-assets rev-parse HEAD)" = "$PROVIDER_REF"
+      - name: Re-run provider-owned delivery regressions
+        working-directory: _provider/game-assets
+        run: |
+          python -m py_compile native_pipeline.py native_glb_delivery.py
+          python native_pipeline_test.py
+          python native_glb_delivery_test.py
+      - name: Export exact Northpole Guard request
+        run: |
+          node --experimental-default-type=module --input-type=module <<'NODE'
+          import { writeFileSync } from "node:fs";
+          import { unitPackFrom } from "./src/contentPacks.js";
+          const pack = unitPackFrom("northpole", ["guard"]);
+          if (!pack || pack.units.length !== 1 || pack.units[0].id !== "guard") throw new Error("Northpole Guard unit pack unavailable");
+          writeFileSync(`${process.env.RUNNER_TEMP}/guard-unit-pack.json`, `${JSON.stringify(pack, null, 2)}\n`);
+          NODE
+          node --experimental-default-type=module tools/export-forge-unit-request.mjs \
+            --unit-pack "$RUNNER_TEMP/guard-unit-pack.json" \
+            --unit guard \
+            --asset-type rigid-proxy \
+            --unit-meters 1.82 \
+            --source-ref "$CONSUMER_REF" \
+            --provider-ref "$PROVIDER_REF" \
+            --output "$RUNNER_TEMP/forge-request.json" \
+            --receipt "$RUNNER_TEMP/forge-request-receipt.json"
+      - name: Build verified provider-owned rigid package and GLB
+        run: |
+          PYTHONPATH="$GITHUB_WORKSPACE/_provider/game-assets" python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from native_geometry import make_box, write_obj
+          from native_pipeline import build_rigid_package, verify_rigid_package
+
+          temp = Path(os.environ["RUNNER_TEMP"])
+          request = json.loads((temp / "forge-request.json").read_text(encoding="utf-8"))
+          source = temp / "guard-rigid-proxy.obj"
+          write_obj(make_box((0.65, 1.82, 0.42), name=request["asset"]["id"]), source, include_normals=False)
+          package = build_rigid_package(source, temp / "rigid-package", material_size=32, seed=20260910)
+          verified = verify_rigid_package(temp / "rigid-package", expected_manifest_sha256=package["manifest_sha256"])
+          assert verified["status"] == "pass"
+          (temp / "manifest-pin.txt").write_text(package["manifest_sha256"], encoding="utf-8")
+          PY
+          PYTHONPATH="$GITHUB_WORKSPACE/_provider/game-assets" python _provider/game-assets/native_glb_delivery.py \
+            --package "$RUNNER_TEMP/rigid-package" \
+            --expected-manifest-sha256 "$(cat "$RUNNER_TEMP/manifest-pin.txt")" \
+            --consumer-request "$RUNNER_TEMP/forge-request.json" \
+            --output "$RUNNER_TEMP/rts-northpole-guard.glb" \
+            --receipt "$RUNNER_TEMP/rts-northpole-guard.glb.receipt.json"
+      - name: Install exact CI-only browser dependencies
+        run: |
+          npm install --no-save --ignore-scripts three@0.180.0 playwright@1.55.0
+          node node_modules/playwright/cli.js install --with-deps chromium
+      - name: Serve exact RTS branch
+        run: |
+          python -m http.server 4173 --bind 127.0.0.1 >"$RUNNER_TEMP/forge-audition-http.log" 2>&1 &
+          echo $! >"$RUNNER_TEMP/forge-audition-http.pid"
+          for attempt in {1..20}; do
+            curl --fail --silent http://127.0.0.1:4173/forge-audition.html >/dev/null && exit 0
+            sleep 0.5
+          done
+          cat "$RUNNER_TEMP/forge-audition-http.log"
+          exit 1
+      - name: Exercise exact delivery in real Chromium
+        env:
+          AXM_FORGE_GLB_FIXTURE_DIR: ${{ runner.temp }}
+          AXM_FORGE_AUDITION_EVIDENCE_DIR: ${{ runner.temp }}/forge-audition-evidence
+        run: |
+          mkdir -p "$AXM_FORGE_AUDITION_EVIDENCE_DIR"
+          node tests/forge-audition-browser-proof.mjs | tee "$AXM_FORGE_AUDITION_EVIDENCE_DIR/evidence.json"
+      - name: Independently bind evidence identities
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          temp = Path(os.environ["RUNNER_TEMP"])
+          evidence = json.loads((temp / "forge-audition-evidence" / "evidence.json").read_text(encoding="utf-8"))
+          receipt = json.loads((temp / "rts-northpole-guard.glb.receipt.json").read_text(encoding="utf-8"))
+          glb = (temp / "rts-northpole-guard.glb").read_bytes()
+          assert evidence["status"] == "PASS"
+          assert evidence["assetId"] == "rts-northpole-guard"
+          assert evidence["requestedHeight"] == "1.82 m"
+          assert evidence["mobileHeldRecovered"] is True
+          assert evidence["glbSha256"] == receipt["delivery"]["sha256"] == "sha256:" + hashlib.sha256(glb).hexdigest()
+          assert evidence["commandApparentHeightPx"] > evidence["distantApparentHeightPx"] > 0
+          assert evidence["pageErrors"] == [] and evidence["consoleErrors"] == [] and evidence["failedRequests"] == []
+          assert evidence["mobileMinInteractiveHeight"] >= 44
+          print("RTS FORGE TACTICAL AUDITION PASS")
+          print("glb", evidence["glbSha256"])
+          print("apparent_height", evidence["commandApparentHeightPx"], "->", evidence["distantApparentHeightPx"], "px")
+          print("mobile_target", evidence["mobileMinInteractiveHeight"], "px")
+          PY
+      - name: Upload exact visual evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-tactical-audition-evidence
+          path: ${{ runner.temp }}/forge-audition-evidence
+          if-no-files-found: error
+          retention-days: 7
+      - name: Whitespace gate against exact stacked base
+        run: git diff --check "${{ github.event.pull_request.base.sha || github.event.before }}"..HEAD

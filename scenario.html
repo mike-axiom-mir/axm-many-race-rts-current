@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="scenario.css" />
 </head>
 <body>
-  <div id="studio">
+  <div id="studio" data-mobile-pane="author">
     <header class="topbar glass">
       <div class="brand">
         <a class="brand-mark" href="./index.html">AXM</a>
@@ -29,7 +29,7 @@
         <div id="hint" class="hint glass">Import a map or decorate the default world.</div>
       </section>
 
-      <aside class="left-panel glass scroll">
+      <aside id="authorPanel" class="left-panel glass scroll">
         <section>
           <div class="eyebrow">AUTHORING LAYER</div>
           <div class="tabs" id="modeTabs">
@@ -95,7 +95,7 @@
         </section>
       </aside>
 
-      <aside class="right-panel glass scroll">
+      <aside id="contentPanel" class="right-panel glass scroll">
         <section>
           <div class="section-head"><div><div class="eyebrow">SCENARIO CONTENT</div><h2 id="contentCount">0 authored objects</h2></div></div>
           <div id="objectList" class="object-list"></div>
@@ -124,15 +124,22 @@
 
         <section>
           <div class="section-title">Validation</div>
-          <div id="validation"></div>
+          <div id="validation" role="status" aria-live="polite"></div>
           <button id="copyBtn" class="wide">Copy scenario JSON</button>
           <input id="fileInput" type="file" accept="application/json,.json" hidden />
         </section>
       </aside>
+
+      <nav id="mobileWorkspace" class="mobile-workspace glass" aria-label="Scenario Studio phone workspace">
+        <button type="button" data-mobile-pane="world" aria-controls="viewportWrap" aria-pressed="false">World</button>
+        <button type="button" data-mobile-pane="author" aria-controls="authorPanel" aria-pressed="true">Author</button>
+        <button type="button" data-mobile-pane="content" aria-controls="contentPanel" aria-pressed="false">Content</button>
+      </nav>
     </main>
   </div>
 
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}</script>
+  <script type="module" src="src/scenarioMobileWorkspace.js"></script>
   <script type="module" src="src/scenarioStudio.js"></script>
 </body>
 </html>

@@ -11,7 +11,7 @@ export const SKIRMISH_UPGRADE_ATLAS_ENTRIES = [
     tags: ["skirmish", "upgrade", upgrade.id, `level-${index + 1}`],
     stats: { level: index + 1, "minimum age": (upgrade.ageByLevel[index] || 0) + 1 },
     source: "builtin-skirmish-upgrades"
-  })),
+  }))),
   ...Object.entries(SIGNATURE_UPGRADES).map(([factionId, upgrade]) => ({
     id: `upgrade:skirmish:${upgrade.id}`,
     type: "upgrade",

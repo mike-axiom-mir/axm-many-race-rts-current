@@ -1,0 +1,48 @@
+{
+  "schema": "axm.rts.floorborn-connected-seat-request/v0.1",
+  "sessionId": "many-race-rts:example-001",
+  "turn": 0,
+  "seatId": "seat-1",
+  "ownerId": "player",
+  "playerId": "floorborn:rts:seat-1",
+  "lineageId": "floorborn:rts:seat-1:local",
+  "publicState": {
+    "schema": "axm-rts-public-skirmish-state/v1",
+    "authoritative": false,
+    "source": "public-runtime-readback",
+    "coverage": "player-economy-ui+world-seats+strategy-ui",
+    "status": "running",
+    "result": null,
+    "seats": {
+      "player": {
+        "id": "player",
+        "factionId": "northpole-dominion",
+        "team": 1,
+        "age": 1,
+        "workforce": 18,
+        "resources": { "food": 320, "wood": 220, "stone": 90, "gold": 140 },
+        "formations": 3,
+        "buildings": 2,
+        "founders": 1,
+        "capitals": 1
+      }
+    },
+    "strategy": { "Map": "Founder's Crossing", "Territory": "1 / 3" }
+  },
+  "legalCommands": [
+    {
+      "id": "move:founder-stone",
+      "type": "move",
+      "point": [12, 0, 8],
+      "target": "founder-stone",
+      "affordanceTags": ["goal"]
+    },
+    {
+      "id": "move:home",
+      "type": "move",
+      "point": [-28, 0, 20],
+      "target": "player-capital",
+      "affordanceTags": ["optional"]
+    }
+  ]
+}

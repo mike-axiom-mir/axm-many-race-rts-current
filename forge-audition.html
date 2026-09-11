@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#071018" />
+  <title>AXM Many-Race RTS — Forge Tactical Audition</title>
+  <link rel="stylesheet" href="forge-audition.css" />
+</head>
+<body>
+  <a class="skip-link" href="#auditionControls">Skip to audition controls</a>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand-mark" href="./index.html" aria-label="Back to AXM Many-Race RTS">AXM</a>
+      <div class="identity">
+        <span class="eyebrow">MANY-RACE RTS · ASSET CONSUMER</span>
+        <h1>Forge Tactical Audition</h1>
+        <p>See an already-verified Forge GLB at RTS command scale before any runtime adoption decision.</p>
+      </div>
+      <div class="truth-badge">EXPERIMENTAL · AUDITION ONLY</div>
+    </header>
+
+    <main class="workspace">
+      <section class="stage-card" aria-labelledby="stageTitle">
+        <div class="stage-heading">
+          <div>
+            <span class="eyebrow">TACTICAL READABILITY STAGE</span>
+            <h2 id="stageTitle">No asset loaded</h2>
+          </div>
+          <div id="renderState" class="state-chip" data-state="waiting">WAITING FOR VERIFIED FILES</div>
+        </div>
+
+        <div id="forgeStage" class="stage" aria-label="RTS tactical asset audition viewport">
+          <div class="stage-empty" id="stageEmpty">
+            <strong>Verified asset not rendered yet.</strong>
+            <span>Choose the exact RTS request, Forge delivery receipt and GLB, then verify explicitly.</span>
+          </div>
+          <div class="stage-overlay" aria-hidden="true">
+            <span id="viewLabel">COMMAND VIEW · 12 m</span>
+            <span id="heightRail">REQUESTED HEIGHT · —</span>
+          </div>
+        </div>
+
+        <div class="stage-controls" id="auditionControls">
+          <div class="segmented" role="group" aria-label="Tactical camera distance">
+            <button type="button" data-view="detail">Detail</button>
+            <button type="button" data-view="command" aria-pressed="true">Command</button>
+            <button type="button" data-view="distant">Distant</button>
+          </div>
+          <button id="rotateButton" type="button" aria-pressed="false">Rotate asset</button>
+          <button id="wireButton" type="button" aria-pressed="false">Wireframe</button>
+          <button id="resetButton" type="button">Reset view</button>
+        </div>
+      </section>
+
+      <aside class="evidence-card" aria-labelledby="inputTitle">
+        <div class="truth-strip">
+          <strong>VERIFIED INPUT REQUIRED</strong>
+          <span>DISPLAY ≠ INSTALL · DISPLAY ≠ VISUAL APPROVAL · NOT CANON</span>
+        </div>
+
+        <section>
+          <span class="eyebrow">LOCAL FILE HANDOFF</span>
+          <h2 id="inputTitle">Bring the delivery to the RTS</h2>
+          <p class="muted">These files stay in this browser tab. The page re-runs the RTS consumer admission before Three.js may parse anything.</p>
+          <div class="file-grid">
+            <label class="file-control"><span>1 · RTS request</span><input id="requestFile" type="file" accept="application/json,.json" /></label>
+            <label class="file-control"><span>2 · Forge receipt</span><input id="receiptFile" type="file" accept="application/json,.json" /></label>
+            <label class="file-control"><span>3 · Verified GLB</span><input id="glbFile" type="file" accept="model/gltf-binary,.glb" /></label>
+          </div>
+          <button id="verifyButton" class="primary" type="button" disabled>Verify and render</button>
+          <p id="statusMessage" class="status-message" role="status" aria-live="polite">Choose all three exact files. Nothing is parsed automatically.</p>
+        </section>
+
+        <section class="metrics" aria-labelledby="metricsTitle">
+          <div class="section-heading"><span class="eyebrow">READABILITY RECEIPT</span><h2 id="metricsTitle">What this realization exposes</h2></div>
+          <dl>
+            <div><dt>Asset</dt><dd id="assetMetric">—</dd></div>
+            <div><dt>Requested height</dt><dd id="requestedMetric">—</dd></div>
+            <div><dt>Rendered bounds</dt><dd id="boundsMetric">—</dd></div>
+            <div><dt>Meshes</dt><dd id="meshMetric">—</dd></div>
+            <div><dt>Apparent height</dt><dd id="screenMetric">—</dd></div>
+            <div><dt>GLB identity</dt><dd id="digestMetric">—</dd></div>
+          </dl>
+          <button id="copyDigestButton" type="button" disabled>Copy GLB identity</button>
+          <p class="metric-note">Apparent height is a measured render-space cue, not an automatic quality score. A human still decides whether the silhouette reads at the intended RTS distance.</p>
+        </section>
+
+        <section class="boundary">
+          <span class="eyebrow">TRUTH CEILING</span>
+          <p><strong>This page may admit and render a replaceable expression.</strong> It cannot install the asset into a formation, change unit stats, mutate a save, approve visual quality, merge a branch, or establish CANON.</p>
+          <p class="network-note">Renderer note: this repository currently loads pinned Three.js r180 from jsDelivr, so the audition needs network access for that existing runtime dependency unless Three.js is already supplied by the host.</p>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}</script>
+  <script type="module" src="src/forgeAudition.js"></script>
+</body>
+</html>
