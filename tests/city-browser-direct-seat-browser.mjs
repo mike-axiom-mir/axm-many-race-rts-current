@@ -18,6 +18,7 @@ if (!chromium) throw new Error("Playwright Chromium export is unavailable");
 
 const providerPath = join(modulesRoot, "axm-city-browser-direct", "manual_webrtc.mjs");
 const threePath = join(modulesRoot, "three", "build", "three.module.js");
+const threeCorePath = join(modulesRoot, "three", "build", "three.core.js");
 const sourcePaths = new Map([
   ["/src/cityBrowserDirectSeat.js", join(repoRoot, "src", "cityBrowserDirectSeat.js")],
   ["/src/world.js", join(repoRoot, "src", "world.js")],
@@ -162,6 +163,7 @@ const server = createServer(async (request, response) => {
     let path = null;
     if (pathname === "/vendor/provider.mjs") path = providerPath;
     else if (pathname === "/vendor/three.mjs") path = threePath;
+    else if (pathname === "/vendor/three.core.js") path = threeCorePath;
     else path = sourcePaths.get(pathname) || null;
     if (!path) {
       response.writeHead(404, { "content-type": "text/plain" });
