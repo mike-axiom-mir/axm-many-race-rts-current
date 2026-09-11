@@ -26,5 +26,8 @@ export function summarizeDamageFeedback(beforeHp, afterHp, maxHp) {
 
 export function damageFeedbackLifetime(summary) {
   if (!summary) return 0;
-  return summary.lethal ? 0.58 : 0.42;
+  // This is human-facing presentation time, not simulation authority. Keep the
+  // response visible long enough to read at RTS scale without overlapping the
+  // ordinary ~0.85s formation attack cadence.
+  return summary.lethal ? 0.82 : 0.68;
 }
