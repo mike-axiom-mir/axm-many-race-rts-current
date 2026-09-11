@@ -18,7 +18,11 @@ test("real Skirmish HP loss answers with bounded visible damage feedback", async
   await page.addInitScript(() => {
     window.__axmDamageFeedbackEvents = [];
     window.addEventListener("axm:combat-damage-feedback", event => {
-      window.__axmDamageFeedbackEvents.push(event.detail);
+      const fx = window.__AXM_RTS_WORLD__?.__axmCombatDamageFeedbackFx;
+      window.__axmDamageFeedbackEvents.push({
+        detail: event.detail,
+        activeAtDispatch: fx?.entries?.length || 0
+      });
     });
   });
 
@@ -52,7 +56,9 @@ test("real Skirmish HP loss answers with bounded visible damage feedback", async
   });
 
   await page.waitForFunction(() => window.__axmDamageFeedbackEvents.length > 0, null, { timeout: 10_000 });
-  const event = await page.evaluate(() => window.__axmDamageFeedbackEvents[0]);
+  const observed = await page.evaluate(() => window.__axmDamageFeedbackEvents[0]);
+  const event = observed.detail;
+  expect(observed.activeAtDispatch).toBeGreaterThan(0);
   expect(event.schema).toBe("axm.rts.visible-damage-feedback/v0.1");
   expect(event.source).toBe("observable-hp-loss");
   expect(event.targetOwner).toBe("enemy");
@@ -61,7 +67,6 @@ test("real Skirmish HP loss answers with bounded visible damage feedback", async
   expect(event.impactStrength).toBeGreaterThan(0);
   expect(event.authority).toEqual({ gameplayMutation: false, combatAttribution: false, canon: false });
 
-  await page.waitForTimeout(80);
   const live = await page.evaluate(() => {
     const world = window.__AXM_RTS_WORLD__;
     const enemy = world.entities.find(entity => entity?.parent && entity.userData?.owner === "enemy" && entity.userData?.type === "squad");
@@ -92,14 +97,22 @@ test("real Skirmish HP loss answers with bounded visible damage feedback", async
   await mkdir("test-results/experience-evidence", { recursive: true });
   await page.screenshot({ path: "test-results/experience-evidence/skirmish-damage-feedback.png", fullPage: true });
 
-  await page.waitForTimeout(600);
+  await page.evaluate(() => {
+    const world = window.__AXM_RTS_WORLD__;
+    const player = world.entities.find(entity => entity?.parent && entity.userData?.owner === "player" && entity.userData?.type === "squad");
+    if (player) {
+      player.userData.cooldown = 999;
+      player.userData.target = null;
+    }
+  });
+  await page.waitForTimeout(900);
   const settled = await page.evaluate(() => window.__AXM_RTS_WORLD__?.__axmCombatDamageFeedbackFx?.entries?.length || 0);
   expect(settled).toBe(0);
   expect(failures, failures.join("\n")).toEqual([]);
 
   const receipt = {
     staged,
-    event,
+    observed,
     live,
     settledEntries: settled,
     runtimeFailures: failures
