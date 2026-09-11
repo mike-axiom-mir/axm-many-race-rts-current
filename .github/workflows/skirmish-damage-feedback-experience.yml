@@ -1,0 +1,74 @@
+name: Skirmish damage feedback experience
+
+on:
+  pull_request:
+    paths:
+      - "src/combatDamageFeedbackModel.js"
+      - "src/combatDamageFeedbackPatch.js"
+      - "src/skirmishEntry.js"
+      - "tests/combat-damage-feedback-model.test.mjs"
+      - "tests/browser/combat-damage-feedback.spec.js"
+      - ".github/workflows/skirmish-damage-feedback-experience.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    name: Presentation contract / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Assert exact authored head
+        if: github.event_name == 'pull_request'
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Check focused syntax
+        run: |
+          node --check src/combatDamageFeedbackModel.js
+          node --check src/combatDamageFeedbackPatch.js
+          node --check tests/browser/combat-damage-feedback.spec.js
+      - name: Run deterministic feedback model contract
+        run: node --test tests/combat-damage-feedback-model.test.mjs
+      - name: Check exact dependency diff whitespace
+        if: github.event_name == 'pull_request'
+        run: git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
+
+  chromium:
+    name: Real Skirmish / Chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Assert exact authored head
+        if: github.event_name == 'pull_request'
+        run: test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run test:syntax
+      - run: node --test tests/combat-damage-feedback-model.test.mjs
+      - run: npx playwright install --with-deps chromium
+      - name: Exercise actual HP-loss feedback loop
+        run: npx playwright test tests/browser/combat-damage-feedback.spec.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: skirmish-damage-feedback-evidence
+          path: test-results/experience-evidence
+          if-no-files-found: warn
+          retention-days: 7
