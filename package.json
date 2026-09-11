@@ -1,0 +1,13 @@
+{
+  "name": "axm-many-race-rts-verification",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:syntax": "node tools/check-js-syntax.mjs",
+    "test:browser": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1"
+  }
+}

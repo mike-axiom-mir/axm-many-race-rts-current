@@ -189,7 +189,7 @@ function spawnAllies() {
     const faction = factionForSeat(seat), start = ALLY_STARTS[index] || ALLY_STARTS[0];
     const founder = markSeatEntity(world.spawnFounder(faction, start.clone(), false), seat);
     founder.position.x += index % 2 ? .4 : -.4;
-    const squad = markSeatEntity(world.spawnSquad(faction.units[0], faction, start.clone().add(new THREE.Vector3(index % 2 ? 2.5 : -2.5,0,2))), false), seat);
+    const squad = markSeatEntity(world.spawnSquad(faction.units[0], faction, start.clone().add(new THREE.Vector3(index % 2 ? 2.5 : -2.5,0,2)), false), seat);
     applySquadRunMods(squad);
     state.aiClock[seat.id] = 2 + index;
   });

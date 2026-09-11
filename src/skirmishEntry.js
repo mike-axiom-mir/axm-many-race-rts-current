@@ -34,6 +34,8 @@ import "./combatWaypointInteropPatch.js";
 import "./mapDominationMomentumPatch.js";
 import "./baseDefenseCoordinationPatch.js";
 import "./skirmishMatchMetricsPatch.js";
+import "./combatDamageFeedbackPatch.js";
+import "./combatImpactAudioPatch.js";
 import "./game.js";
 import "./skirmishCommandObserver.js";
 import "./skirmishFactionStatsPersistencePatch.js";
