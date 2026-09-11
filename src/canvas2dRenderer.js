@@ -210,4 +210,3 @@ export class Canvas2DRenderer {
     ctx.fillText("CANVAS 2D FALLBACK • SAME LIVE SIMULATION", 21, this.height - 19);
   }
 }
-
