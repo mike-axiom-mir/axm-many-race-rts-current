@@ -1,0 +1,95 @@
+name: Floorborn explicit seat application
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/floorborn-explicit-application.yml"
+      - "docs/FLOORBORN_EXPLICIT_APPLICATION.md"
+      - "integrations/floorborn-explicit-application/integration.json"
+      - "src/floorbornExplicitApplication.js"
+      - "src/floorbornBoundExchange.js"
+      - "src/floorbornConnectedSeat.js"
+      - "src/multiSeatPatch.js"
+      - "src/seatControllers.js"
+      - "src/core/commandSchema.js"
+      - "test/floorborn-explicit-application.test.mjs"
+      - "test/floorborn-bound-exchange.test.mjs"
+      - "test/floorborn-connected-seat.test.mjs"
+      - "tools/floorborn-bound-seat-bridge.mjs"
+
+permissions:
+  contents: read
+
+jobs:
+  application-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out RTS consumer with stacked history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Check syntax and integration metadata
+        run: |
+          node --check src/floorbornExplicitApplication.js
+          node --check test/floorborn-explicit-application.test.mjs
+          node -e 'JSON.parse(require("node:fs").readFileSync("integrations/floorborn-explicit-application/integration.json", "utf8"))'
+      - name: Run explicit-application regressions
+        run: node --test test/floorborn-explicit-application.test.mjs
+      - name: Preserve request-bound prerequisite regressions
+        run: node --test test/floorborn-bound-exchange.test.mjs
+      - name: Preserve original connected-seat regressions
+        run: node --test test/floorborn-connected-seat.test.mjs
+      - name: Check patch whitespace against exact stacked base
+        run: git diff --check "${{ github.event.pull_request.base.sha }}"...HEAD
+
+  exact-provider-existing-door:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out RTS consumer
+        uses: actions/checkout@v4
+      - name: Check out exact Floorborn provider
+        uses: actions/checkout@v4
+        with:
+          repository: mike-axiom-mir/axm-floor-born
+          ref: 9183acabfd9fab1f2913527871e651300a160e62
+          path: floorborn-provider
+      - name: Set up Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Run provider-owned portable and strict-JSON regressions
+        working-directory: floorborn-provider
+        run: node --test test/portable-capability.test.js test/cli-json-admission.test.js
+      - name: Pack exact provider
+        working-directory: floorborn-provider
+        run: |
+          mkdir -p "$RUNNER_TEMP/floorborn-pack"
+          npm pack --pack-destination "$RUNNER_TEMP/floorborn-pack"
+          test -f "$RUNNER_TEMP/floorborn-pack/axm-floor-born-0.15.1.tgz"
+      - name: Install provider offline into unrelated consumer
+        run: |
+          mkdir -p "$RUNNER_TEMP/floorborn-consumer"
+          cd "$RUNNER_TEMP/floorborn-consumer"
+          npm init -y >/dev/null
+          npm install --offline --ignore-scripts "$RUNNER_TEMP/floorborn-pack/axm-floor-born-0.15.1.tgz"
+          test -f node_modules/axm-floor-born/bin/floorborn-player.js
+      - name: Stage exact Three.js runtime dependency for existing RTS door test only
+        run: |
+          mkdir -p "$RUNNER_TEMP/rts-three"
+          cd "$RUNNER_TEMP/rts-three"
+          npm init -y >/dev/null
+          npm install --ignore-scripts --save-exact three@0.180.0
+          test "$(node --input-type=module -e 'import("three").then(m => process.stdout.write(String(m.REVISION)))')" = "180"
+          ln -s "$RUNNER_TEMP/rts-three/node_modules" "$GITHUB_WORKSPACE/node_modules"
+      - name: Prove installed Floorborn candidate through exact existing connected-AI event door
+        env:
+          FLOORBORN_V02_PROVIDER: ${{ runner.temp }}/floorborn-consumer/node_modules/axm-floor-born/bin/floorborn-player.js
+        run: node --test test/floorborn-explicit-application.test.mjs
+      - name: Preserve exact installed-provider request-bound proof
+        env:
+          FLOORBORN_V02_PROVIDER: ${{ runner.temp }}/floorborn-consumer/node_modules/axm-floor-born/bin/floorborn-player.js
+        run: node --test test/floorborn-bound-exchange.test.mjs

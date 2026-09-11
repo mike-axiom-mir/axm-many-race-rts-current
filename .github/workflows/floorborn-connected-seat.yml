@@ -1,0 +1,50 @@
+name: Floorborn connected-seat bridge
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/floorborn-connected-seat.yml"
+      - "docs/FLOORBORN_CONNECTED_SEAT.md"
+      - "examples/floorborn-connected-seat-request.json"
+      - "src/floorbornConnectedSeat.js"
+      - "src/core/commandSchema.js"
+      - "src/package.json"
+      - "test/floorborn-connected-seat.test.mjs"
+      - "tools/floorborn-seat-bridge.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    strategy:
+      matrix:
+        node: [24]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out RTS consumer
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Check out exact Floorborn provider
+        uses: actions/checkout@v4
+        with:
+          repository: mike-axiom-mir/axm-floor-born
+          ref: ae244d3dd72c516f4905ba21fedd349d7b60389b
+          path: floorborn-provider
+      - name: Set up Node ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Verify provider and consumer contracts
+        env:
+          FLOORBORN_PROVIDER: ${{ github.workspace }}/floorborn-provider/bin/floorborn-player.js
+        run: node --test test/floorborn-connected-seat.test.mjs
+      - name: Run documented example through exact provider
+        run: >-
+          node tools/floorborn-seat-bridge.mjs run
+          --provider floorborn-provider/bin/floorborn-player.js
+          < examples/floorborn-connected-seat-request.json
+      - name: Check patch whitespace
+        run: git diff --check HEAD^

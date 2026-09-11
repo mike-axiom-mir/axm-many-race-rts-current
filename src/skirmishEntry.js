@@ -1,3 +1,5 @@
+import "./core/foundationBootstrap.js";
+import "./core/skirmishFoundationBridge.js";
 import "./selectedMapPatch.js";
 import "./defenseRosterRegistryPatch.js";
 import "./scoutRegistryPatch.js";
@@ -33,5 +35,6 @@ import "./mapDominationMomentumPatch.js";
 import "./baseDefenseCoordinationPatch.js";
 import "./skirmishMatchMetricsPatch.js";
 import "./game.js";
+import "./skirmishCommandObserver.js";
 import "./skirmishFactionStatsPersistencePatch.js";
 import "./factionStatsHistoryUiPatch.js";
