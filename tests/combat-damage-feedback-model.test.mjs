@@ -29,5 +29,5 @@ test("invalid after values fail closed to no invented loss", () => {
   assert.equal(summarizeDamageFeedback(50, Number.NaN, 100), null);
   const summary = summarizeDamageFeedback(50, 40, Number.NaN);
   assert.equal(summary.fraction, 0.2);
-  assert.equal(summary.strength, 0.86);
+  assert.ok(Math.abs(summary.strength - 0.86) < 1e-12);
 });
