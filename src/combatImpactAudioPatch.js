@@ -1,5 +1,6 @@
 const SETTINGS_KEY = "axm.manyRaceRts.settings";
 const AUDIO_EVENT = "axm:combat-impact-audio";
+export const MAX_ACTIVE_AUDIO_VOICES = 8;
 
 function finite(value, fallback = 0) {
   const number = Number(value);
@@ -23,7 +24,11 @@ export function readMasterVolume(storage = globalThis.localStorage) {
 export function summarizeImpactAudio(detail, masterVolume = 80) {
   if (!detail || detail.schema !== "axm.rts.visible-damage-feedback/v0.1") return null;
   if (detail.source !== "observable-hp-loss") return null;
-  if (detail.authority?.gameplayMutation !== false || detail.authority?.canon !== false) return null;
+  if (
+    detail.authority?.gameplayMutation !== false ||
+    detail.authority?.combatAttribution !== false ||
+    detail.authority?.canon !== false
+  ) return null;
 
   const strength = clamp(finite(detail.impactStrength, 0), 0, 1);
   const volume = clamp(finite(masterVolume, 80), 0, 100) / 100;
@@ -45,7 +50,7 @@ export function summarizeImpactAudio(detail, masterVolume = 80) {
   });
 }
 
-function dispatchReceipt(win, profile, played, reason, contextState = "unavailable") {
+function dispatchReceipt(win, profile, played, reason, contextState = "unavailable", activeVoices = 0) {
   win.dispatchEvent(new CustomEvent(AUDIO_EVENT, {
     detail: Object.freeze({
       schema: "axm.rts.combat-impact-audio/v0.1",
@@ -56,6 +61,8 @@ function dispatchReceipt(win, profile, played, reason, contextState = "unavailab
       impactStrength: Number(profile?.strength || 0),
       masterVolume: Number(profile?.volume || 0),
       voiceCount: played ? Number(profile?.voiceCount || 0) : 0,
+      activeVoices: Number(activeVoices || 0),
+      maxActiveVoices: MAX_ACTIVE_AUDIO_VOICES,
       contextState,
       played,
       reason,
@@ -64,7 +71,7 @@ function dispatchReceipt(win, profile, played, reason, contextState = "unavailab
   }));
 }
 
-function scheduleVoice(context, destination, frequency, gainValue, duration, type = "triangle") {
+function scheduleVoice(context, destination, frequency, gainValue, duration, type, onEnded) {
   const now = context.currentTime;
   const oscillator = context.createOscillator();
   const gain = context.createGain();
@@ -76,6 +83,7 @@ function scheduleVoice(context, destination, frequency, gainValue, duration, typ
   gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
   oscillator.connect(gain);
   gain.connect(destination);
+  oscillator.onended = onEnded;
   oscillator.start(now);
   oscillator.stop(now + duration + 0.015);
 }
@@ -88,11 +96,12 @@ export function installCombatImpactAudio(win = globalThis.window) {
     context: null,
     armed: false,
     supported: Boolean(AudioContextCtor),
-    scheduled: 0
+    scheduled: 0,
+    activeVoices: 0
   };
 
   async function armFromHumanInput() {
-    if (!AudioContextCtor) return;
+    if (!AudioContextCtor || readMasterVolume(win.localStorage) <= 0) return;
     if (!state.context) state.context = new AudioContextCtor({ latencyHint: "interactive" });
     try {
       if (state.context.state === "suspended") await state.context.resume();
@@ -110,27 +119,36 @@ export function installCombatImpactAudio(win = globalThis.window) {
     if (!profile) return;
 
     if (!profile.audible) {
-      dispatchReceipt(win, profile, false, "muted-by-local-setting", state.context?.state || "not-created");
+      dispatchReceipt(win, profile, false, "muted-by-local-setting", state.context?.state || "not-created", state.activeVoices);
       return;
     }
     if (!state.supported) {
-      dispatchReceipt(win, profile, false, "webaudio-unavailable", "unavailable");
+      dispatchReceipt(win, profile, false, "webaudio-unavailable", "unavailable", state.activeVoices);
       return;
     }
     if (!state.armed || state.context?.state !== "running") {
-      dispatchReceipt(win, profile, false, "awaiting-human-audio-activation", state.context?.state || "not-created");
+      dispatchReceipt(win, profile, false, "awaiting-human-audio-activation", state.context?.state || "not-created", state.activeVoices);
+      return;
+    }
+    if (state.activeVoices + profile.voiceCount > MAX_ACTIVE_AUDIO_VOICES) {
+      dispatchReceipt(win, profile, false, "voice-budget-held", state.context.state, state.activeVoices);
       return;
     }
 
     try {
-      scheduleVoice(state.context, state.context.destination, profile.frequency, profile.gain, profile.duration, "triangle");
+      const releaseVoice = () => {
+        state.activeVoices = Math.max(0, state.activeVoices - 1);
+      };
+      state.activeVoices += profile.voiceCount;
+      scheduleVoice(state.context, state.context.destination, profile.frequency, profile.gain, profile.duration, "triangle", releaseVoice);
       if (profile.lethal) {
-        scheduleVoice(state.context, state.context.destination, Math.max(42, Math.round(profile.frequency * 0.52)), profile.gain * 0.82, profile.duration * 1.12, "sine");
+        scheduleVoice(state.context, state.context.destination, Math.max(42, Math.round(profile.frequency * 0.52)), profile.gain * 0.82, profile.duration * 1.12, "sine", releaseVoice);
       }
       state.scheduled += profile.voiceCount;
-      dispatchReceipt(win, profile, true, "observable-hit-scheduled", state.context.state);
+      dispatchReceipt(win, profile, true, "observable-hit-scheduled", state.context.state, state.activeVoices);
     } catch {
-      dispatchReceipt(win, profile, false, "webaudio-schedule-failed", state.context?.state || "unknown");
+      state.activeVoices = Math.max(0, state.activeVoices - profile.voiceCount);
+      dispatchReceipt(win, profile, false, "webaudio-schedule-failed", state.context?.state || "unknown", state.activeVoices);
     }
   });
 
