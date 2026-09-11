@@ -21,6 +21,12 @@ export function readMasterVolume(storage = globalThis.localStorage) {
   return clamp(finite(saved.masterVolume, 80), 0, 100);
 }
 
+export function hasImpactVoiceBudget(activeVoices, requestedVoices) {
+  const active = Math.max(0, Math.trunc(finite(activeVoices, 0)));
+  const requested = Math.max(0, Math.trunc(finite(requestedVoices, 0)));
+  return requested > 0 && active + requested <= MAX_ACTIVE_AUDIO_VOICES;
+}
+
 export function summarizeImpactAudio(detail, masterVolume = 80) {
   if (!detail || detail.schema !== "axm.rts.visible-damage-feedback/v0.1") return null;
   if (detail.source !== "observable-hp-loss") return null;
@@ -130,7 +136,7 @@ export function installCombatImpactAudio(win = globalThis.window) {
       dispatchReceipt(win, profile, false, "awaiting-human-audio-activation", state.context?.state || "not-created", state.activeVoices);
       return;
     }
-    if (state.activeVoices + profile.voiceCount > MAX_ACTIVE_AUDIO_VOICES) {
+    if (!hasImpactVoiceBudget(state.activeVoices, profile.voiceCount)) {
       dispatchReceipt(win, profile, false, "voice-budget-held", state.context.state, state.activeVoices);
       return;
     }
