@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { MAX_ACTIVE_AUDIO_VOICES, readMasterVolume, summarizeImpactAudio } from "../src/combatImpactAudioPatch.js";
+import { MAX_ACTIVE_AUDIO_VOICES, hasImpactVoiceBudget, readMasterVolume, summarizeImpactAudio } from "../src/combatImpactAudioPatch.js";
 
 const authority = Object.freeze({ gameplayMutation: false, combatAttribution: false, canon: false });
 
@@ -48,7 +48,16 @@ test("stronger and lethal observed damage only enrich the replaceable sound real
   assert.equal(lethal.voiceCount, 2);
   assert.ok(lethal.duration > strong.duration);
   assert.ok(lethal.frequency < strong.frequency);
+});
+
+test("concurrent sound expression degrades before exceeding the bounded voice budget", () => {
   assert.equal(MAX_ACTIVE_AUDIO_VOICES, 8);
+  assert.equal(hasImpactVoiceBudget(0, 1), true);
+  assert.equal(hasImpactVoiceBudget(6, 2), true);
+  assert.equal(hasImpactVoiceBudget(7, 2), false);
+  assert.equal(hasImpactVoiceBudget(8, 1), false);
+  assert.equal(hasImpactVoiceBudget(0, 0), false);
+  assert.equal(hasImpactVoiceBudget(-4, 1), true);
 });
 
 test("saved master volume defaults safely and clamps malformed local preference", () => {
