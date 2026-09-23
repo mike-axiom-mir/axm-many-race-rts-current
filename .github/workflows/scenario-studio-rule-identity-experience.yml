@@ -48,3 +48,4 @@ jobs:
           name: scenario-studio-rule-identity-evidence
           path: test-results/*.png
           if-no-files-found: warn
+          retention-days: 14
