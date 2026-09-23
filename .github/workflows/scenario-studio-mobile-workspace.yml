@@ -52,3 +52,4 @@ jobs:
           name: scenario-studio-mobile-workspace-evidence
           path: test-results/scenario-mobile-*.png
           if-no-files-found: warn
+          retention-days: 14
